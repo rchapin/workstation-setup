@@ -1,0 +1,14 @@
+install-packages:
+  packages:
+    mode: APPEND
+    value:
+      - remmina
+      - hp-ppd
+      - hplip
+      - hplip-gui
+
+install-maven:
+  version:
+    mode: OVERRIDE
+    value: 3.6.3
+

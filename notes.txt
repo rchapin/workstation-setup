@@ -1,0 +1,8 @@
+packages to add
+xsel
+
+need to automate adding bashrc
+vimrc
+
+list of VScode Extensions
+- Git Graph

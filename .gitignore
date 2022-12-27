@@ -1,0 +1,8 @@
+envs.sh
+.project
+.pydevproject
+config.yml
+__pycache__
+*.swp
+.vagrant
+.coverage

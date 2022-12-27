@@ -1,0 +1,205 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "ws_install-cert",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-cert",
+        "-c",
+        "/home/rchapin/shares/host_Documents/xfer/ws-xfer/certs/sample.pem"
+      ]
+    },
+    {
+      "name": "ws_install-java-cert",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-cert-into-jvm",
+        "-c",
+        "/home/rchapin/Documents/certs/sample.pem"
+      ]
+    },
+    {
+      "name": "ws_install-packages",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-packages",
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11",
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+      }
+    },
+    {
+      "name": "ws_install-docker",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-docker",
+        "-d",
+        "rchapin"
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11",
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+      }
+    },
+    {
+      "name": "ws_install-java",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-java",
+      ]
+    },
+    {
+      "name": "ws_install-maven",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-maven",
+      ]
+    },
+    {
+      "name": "ws_install-intellij",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-intellij",
+        "-t",
+        "/home/rchapin/shares/host_Documents/xfer/ideaIU-2022.2.3.tar.gz"
+      ]
+    },
+    {
+      "name": "ws_install-chrome",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-chrome"
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11",
+      }
+    },
+    {
+      "name": "ws_install-mikube",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-minikube"
+      ]
+    },
+    {
+      "name": "ws_install-helm",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-helm"
+      ]
+    },
+    {
+      "name": "ws_install-gradle",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-gradle"
+      ]
+    },
+    {
+      "name": "ws_install-dbeaver",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-dbeaver"
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11",
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+      }
+    },
+    {
+      "name": "ws_install-redshift",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-redshift"
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11"
+      }
+    },
+    {
+      "name": "ws_install-slack",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "args": [
+        "install-slack"
+      ],
+      "env": {
+        "WS_SETUP_DISTRO": "debian_11"
+      }
+    }
+  ]
+}
