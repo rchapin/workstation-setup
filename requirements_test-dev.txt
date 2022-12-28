@@ -1,0 +1,6 @@
+black==22.8.0
+pyOpenSSL==22.1.0
+pytest-env==0.8.1
+coverage==7.0.1
+python-vagrant==1.0.0
+GitPython==3.1.30

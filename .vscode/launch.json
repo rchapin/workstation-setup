@@ -11,7 +11,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-cert",
         "-c",
@@ -25,7 +25,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-cert-into-jvm",
         "-c",
@@ -39,13 +39,13 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-packages",
       ],
       "env": {
         "WS_SETUP_DISTRO": "debian_11",
-        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup/rchapin-wsconfigs.yaml"
       }
     },
     {
@@ -55,7 +55,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-docker",
         "-d",
@@ -63,7 +63,7 @@
       ],
       "env": {
         "WS_SETUP_DISTRO": "debian_11",
-        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup/rchapin-wsconfigs.yaml"
       }
     },
     {
@@ -73,7 +73,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-java",
       ]
@@ -85,7 +85,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-maven",
       ]
@@ -97,7 +97,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-intellij",
         "-t",
@@ -108,16 +108,42 @@
       "name": "ws_install-chrome",
       "type": "python",
       "request": "launch",
-      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/workstationsetup",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
-        "install-chrome"
+        "--pydeploy-config-dir",
+        "/home/rchapin/Documents/workspace/pydeploy-configs",
+        "--config-path",
+        "/home/rchapin/Documents/workspace/workstation-setup/rchapin-wsconfigs.yaml",
+        "--hosts",
+        "localhost",
+        "install-chrome",
+        "--my-arg",
+        "forble"
       ],
       "env": {
         "WS_SETUP_DISTRO": "debian_11",
       }
+    },
+    {
+      "name": "inotify",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/workstationsetup",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
+      "args": [
+        "--pydeploy-config-dir",
+        "/home/rchapin/Documents/workspace/pydeploy-configs",
+        "--config-path",
+        "/var/tmp/ws-setup.yaml",
+        "--hosts",
+        "localhost",
+        "setup-inotify"
+      ],
     },
     {
       "name": "ws_install-mikube",
@@ -126,7 +152,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-minikube"
       ]
@@ -138,7 +164,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-helm"
       ]
@@ -150,7 +176,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-gradle"
       ]
@@ -162,13 +188,13 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-dbeaver"
       ],
       "env": {
         "WS_SETUP_DISTRO": "debian_11",
-        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup-xfer/rchapin-wsconfigs.yaml"
+        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup/rchapin-wsconfigs.yaml"
       }
     },
     {
@@ -178,7 +204,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-redshift"
       ],
@@ -193,7 +219,7 @@
       "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
       "console": "integratedTerminal",
       "justMyCode": false,
-      "cwd": "/home/rchapin/Documents/workspace/workstation-setup-xfer",
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
         "install-slack"
       ],

@@ -16,7 +16,7 @@ Options:
 
   -c CONFIGURE_SSHD (optional)
      Whether or not we should configure the sshd daemon to allow root logins and
-     then restart it.
+     then restart the sshd service.
 
   -u NON_ROOT_USER
      The non-root user to be added to the system.  If the user already exists, this is a noop.
@@ -88,7 +88,7 @@ echo "Executing bootstrap; CONFIGURE_SSHD=$CONFIGURE_SSHD, NON_ROOT_USER=$NON_RO
 
 # Attempt to add the user to the system, if they do not already exist this will just fail without
 # any negative effect.
-useradd $NON_ROOT_USER
+useradd -m -s /bin/bash $NON_ROOT_USER
 
 set -e
 
@@ -98,11 +98,16 @@ echo "$NON_ROOT_USER ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/$NON_ROOT_USER
 if [ "$CONFIGURE_SSHD" -eq 1 ]
 then
   echo "Configuring sshd for passwordless root logins"
-  # Ensure that we can passwordlessly ssh to this host
   sed -i '/PermitRootLogin/d' /etc/ssh/sshd_config
   echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
   systemctl restart sshd
 fi
+
+# Ensure that sshd is configured to allow password based logins
+echo "Configuring sshd to enable password authenticated logins"
+sed -i '/PasswordAuthentication/d' /etc/ssh/sshd_config
+echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config
+systemctl restart sshd
 
 apt-get update
 apt-get install -y  \
@@ -122,4 +127,3 @@ apt-get install -y  \
   vim \
   wget \
   zlib1g-dev
-

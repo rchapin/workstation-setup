@@ -1,0 +1,21 @@
+distro:
+  name: debian
+  version: 11
+  window_manager: xfce4
+
+task_configs:
+
+  install-packages:
+    packages:
+      mode: APPEND
+      value:
+        - remmina
+        - hp-ppd
+        - hplip
+        - hplip-gui
+
+  install-maven:
+    version:
+      mode: OVERRIDE
+      value: 3.6.3
+

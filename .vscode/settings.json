@@ -1,13 +1,6 @@
 {
   "python.formatting.provider": "black",
   "python.testing.unittestEnabled": false,
-  // "python.testing.unittestArgs": [
-  //   "-v",
-  //   "-s",
-  //   "./workstationsetup",
-  //   "-p",
-  //   "test_*.py"
-  // ],
   "python.testing.pytestEnabled": true,
   "python.testing.pytestArgs": [
     "-s",

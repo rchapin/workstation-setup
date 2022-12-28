@@ -1,8 +1,0 @@
-[Unit]
-Description=Runs redshift
-
-[Service]
-ExecStart=/usr/bin/redshift
-
-[Install]
-WantedBy = default.target

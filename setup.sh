@@ -26,3 +26,4 @@ $PYTHON -mvenv $VIRT_ENV_PATH
 . $VIRT_ENV_PATH/bin/activate
 pip install -U setuptools pip
 pip install -r ./requirements.txt
+pip install .

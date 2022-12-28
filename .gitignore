@@ -1,3 +1,5 @@
+.coverage
+*.egg-info
 envs.sh
 .project
 .pydevproject
@@ -6,3 +8,5 @@ __pycache__
 *.swp
 .vagrant
 .coverage
+build/
+pytest.ini

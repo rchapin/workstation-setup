@@ -3,7 +3,7 @@
 ###############################################################################
 # Wrapper script for setting up and running integration tests
 #
-# name:     run-tests.sh
+# name:     run-tests
 # author:   Ryan Chapin
 #
 ################################################################################
@@ -46,53 +46,53 @@ function export_env_vars {
   # change as an environmental variable in the calling shell.
 
   export WS_SETUP_INTTEST_TEST_HOST=${WS_SETUP_INTTEST_TEST_HOST:-localhost}
+  export WS_SETUP_INTTEST_TEST_USER=${WS_SETUP_INTTEST_TEST_USER:-$USER}
 
   # Parent directory for all of the integration test files and directories
   export WS_SETUP_INTTEST_PARENT_DIR=${WS_SETUP_INTTEST_PARENT_DIR:-/var/tmp/workstation-setup-integration-test}
   export WS_SETUP_INTTEST_CONFIG_DIR=${WS_SETUP_INTTEST_CONFIG_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/config}
-  export WS_SETUP_INTTEST_TEST_DATA_DIR=${WS_SETUP_INTTEST_TEST_DATA_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/test_data}
-  export WS_SETUP_INTTEST_DOCKER_DIR=${WS_SETUP_INTTEST_DOCKER_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/docker}
-  export WS_SETUP_INTTEST_SSH_IDENTITY_FILE=${WS_SETUP_INTTEST_SSH_IDENTITY_FILE:-$WS_SETUP_INTTEST_DOCKER_DIR/id_rsa}
+  export WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_DIR=${WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/pydeploy-configs}
+  export WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_REFSPEC=${WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_REFSPEC:-main}
+  export WS_SETUP_INTTEST_VAGRANT_DIR=${WS_SETUP_INTTEST_VAGRANT_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/vagrant}
+  export WS_SETUP_INTTEST_SSH_IDENTITY_FILE=${WS_SETUP_INTTEST_SSH_IDENTITY_FILE:-$WS_SETUP_INTTEST_VAGRANT_DIR/id_rsa}
   export WS_SETUP_INTTEST_SSH_IDENTITY_FILE_PUB=${WS_SETUP_INTTEST_SSH_IDENTITY_FILE_PUB:-${WS_SETUP_INTTEST_SSH_IDENTITY_FILE}.pub}
   export WS_SETUP_INTTEST_VIRTENV_DIR=${WS_SETUP_INTTEST_VIRTENV_DIR:-$WS_SETUP_INTTEST_PARENT_DIR/virtenv}
 
-  # For each of the distros that we are going to test we need to build a container of a known name
-  # with a unique tag
-  export WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX=${WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX:-workstationsetup_inttest}
-
-  # For each of the distro containers that we will build and run for the integration tests we need
-  # to define a separate port on which will will have docker map the ssh connections.
-  export WS_SETUP_INTTEST_CONTAINER_START_PORT=${WS_SETUP_INTTEST_CONTAINER_START_PORT:-22222}
+  # For each of the distro boxes that we will build and run for the integration tests we need to
+  # define a separate port on which will map the ssh connections.
+  export WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT=${WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT:-22222}
 
   # When we build each container we will export env vars that indicate the name of the container
   # and the expected port to use for each
 
   # It doesn't really matter what this password is. We just need something
   # with which we can ssh/rsync to the container to execute the tests
-  export WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD=${WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD:-password123}
-  export WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD_FILE=${WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD_FILE:-$WS_SETUP_INTTEST_PARENT_DIR/test-container-root-passwd.txt}
+  export WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD=${WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD:-password123}
+  export WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE=${WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE:-$WS_SETUP_INTTEST_PARENT_DIR/test-container-root-passwd.txt}
 
-  # For each of the distros that we are testing we will build a docker image and for each need to
-  # export an env var, the key is the name of the distro/container and the value is a tuple that
-  # contains the image tag and the port that will be mapped to port 22 inside the container.
-  export WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX=${WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX:-workstationsetup_inttest}
+  # Whether or not we are going to reuse vagrant boxes between test runs.  By default this is false.
+  # The only use-case for this is when you are actually developing new tasks and do not want to spin
+  # up the box between test runs.
+  export WS_SETUP_INTTEST_VAGRANT_BOX_REUSE=${WS_SETUP_INTTEST_VAGRANT_BOX_REUSE:-False}
 
-  # After creating the configs for each container we will use and then increment the start port for
-  # its initialization step.
-  local port=$WS_SETUP_INTTEST_CONTAINER_START_PORT
+  # For each of the distros that we are testing we will create a vagrant box and for each need to
+  # export an env var, the key is the name of the distro directory and the value is
+  # a tuple which is the name of the box to be created and the the port that will be
+  # mapped to port 22 inside the container. After creating the configs for each container we will
+  # use and then increment the start port for its initialization step.
+  local port=$WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT
 
-  for distro in `ls workstationsetup/integration_tests/docker/`
+  for distro in `ls workstationsetup/integration_tests/vagrant/`
   do
-    # Generate the tag, and the name of the image we will use for initialization
+    # Generate the name of the env var key for this box.
     distro_key=$(echo $distro | tr [:lower:] [:upper:])
-    image_tag="${WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX}_${distro}"
-    image_name="${WS_SETUP_INTTEST_CONTAINER_NAME_PREFIX}_${distro}"
+    box_name=$distro
 
     # Generate the env var key
-    key="WS_SETUP_INTTEST_CONTAINER_INSTANCE_${distro_key}"
+    key="WS_SETUP_INTTEST_VAGRANT_BOX_INSTANCE_${distro_key}"
 
     # Tuple of values to include the image tag and the port
-    val="${image_tag}:${port}"
+    val="${box_name}:${port}"
     declare -gx "$key"="$val"
 
     # Bump the port for the next image
@@ -124,13 +124,18 @@ function which_linux_distro {
 #-------------------------------------------------------------------------------
 function install_dependencies {
   distro=$(which_linux_distro)
+
+  # TODO: add installation of virtual box
+  # https://linuxiac.com/how-to-install-virtualbox-on-debian-11-bullseye/
+
   case $distro in
 
     debian)
-      sudo apt-get install -y openssh-server netcat-traditional rsync sshpass
+      sudo apt-get install -y openssh-server packer netcat-traditional sshpass vagrant apt-transport-https ca-certificates gnupg
       ;;
 
     redhat)
+      # TODO
       echo "redhat"
       ;;
 
@@ -142,75 +147,100 @@ function install_dependencies {
 }
 
 #---  FUNCTION  ----------------------------------------------------------------
-#          NAME:  build_docker_test_image
-#   DESCRIPTION:  Builds the docker image which we will use to run the tests.
+#          NAME:  setup_vagrant_boxes
+#   DESCRIPTION:  Builds and configures the vagrant boxes with which we will use
+#                 to run the tests.
 #-------------------------------------------------------------------------------
-function build_docker_test_image {
+function setup_vagrant_boxes {
   local start_dir=$(pwd)
 
-  # Generate an ssh key to be added to the docker image when we build it.
+  # Generate an ssh key to be added to the box when we build it.
   ssh-keygen -q -t rsa -N '' -f $WS_SETUP_INTTEST_SSH_IDENTITY_FILE <<<y 2>&1 >/dev/null
 
-  # For each of the distros that we are testing we need to copy the docker file to the "build" dir
-  # and build the docker image
-  for distro in `ls workstationsetup/integration_tests/docker/`
+  # For each of the distros that we are testing we need to copy the Vagrant file and its configs to
+  # the "build" dir and build VM and then package the box.
+  local repo_vagrant_dir="workstationsetup/integration_tests/vagrant"
+  for distro in `ls $repo_vagrant_dir`
   do
-    # Copy to the Dockerfile and the bootstrap script to the build dir
-    distro_docker_dir=$WS_SETUP_INTTEST_DOCKER_DIR/$distro
-    mkdir -p $distro_docker_dir
-    cp workstationsetup/integration_tests/docker/$distro/Dockerfile $distro_docker_dir
-    cp bootstrap/bootstrap-${distro}.sh $distro_docker_dir
+    distro_vagrant_dir=$WS_SETUP_INTTEST_VAGRANT_DIR/$distro
 
-    # We also copy the install-python.sh script into the docker container to ensure that we can run
-    # and validate it during the integration testing.
-    cp install-python.sh $distro_docker_dir
+    # Copy the vagrant dir and the required files that we will use to build the box
+    cp -Rpf $repo_vagrant_dir/$distro $WS_SETUP_INTTEST_VAGRANT_DIR/
 
     # Copy the public ssh key into the build dir
-    cp $WS_SETUP_INTTEST_SSH_IDENTITY_FILE_PUB $distro_docker_dir
-    cd $distro_docker_dir
+    cp $WS_SETUP_INTTEST_SSH_IDENTITY_FILE_PUB $distro_vagrant_dir
 
-    # Read the already exported env var by dynamically generate the env var for which we will be
-    # accessing.
+    # Read the already exported env var by dynamically generating the env var that we will read.
     distro_key=$(echo $distro | tr [:lower:] [:upper:])
-    env_var_key="WS_SETUP_INTTEST_CONTAINER_INSTANCE_${distro_key}"
+    env_var_key="WS_SETUP_INTTEST_VAGRANT_BOX_INSTANCE_${distro_key}"
     OIFS="$IFS"
     IFS=':'
     # Access the env var with the dynamic variable expansion syntax ${!<name>}
-    read -r image_tag port <<< "${!env_var_key}"
+    read -r box_name port <<< "${!env_var_key}"
     IFS="$OIFS"
 
-    docker build \
-    --build-arg root_passwd=$WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD \
-    --build-arg user=$USER \
-    -t $image_tag .
-    initialize_docker_container $image_name $image_tag $port
+    echo "Building Vagrant box; start_dir=$start_dir, build_vagrant_dir=$distro_vagrant_dir, box_name=$box_name, port=$port"
+    box_path=$(build_vagrant_box $start_dir $distro_vagrant_dir $box_name $port)
 
-    cd $start_dir
+    echo "Initializing Vagrant box; start_dir=$start_dir, build_vagrant_dir=$distro_vagrant_dir, box_name=$box_name, port=$port, box_path=$box_path"
+    initialize_vagrant_box $start_dir $distro_vagrant_dir $box_name $port $box_path
+
   done
 
   # Write out the password to a text file
-  echo "$WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD" > $WS_SETUP_INTTEST_CONTAINER_ROOT_PASSWD_FILE
+  echo "$WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD" > $WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE
 }
 
 #---  FUNCTION  ----------------------------------------------------------------
-#          NAME:  initialize_docker_container
-#   DESCRIPTION:  Start the docker container to setup the entries in the known
-#                 host file.
+#          NAME:  build_vagrant_box
+#   DESCRIPTION:  Build the vagrant box based on the provided packer file
+#        RETURN:  The path to the newly built box file
 #-------------------------------------------------------------------------------
-function initialize_docker_container {
-  local container_name=$1
-  local container_tag=$2
-  local container_port=$3
+function build_vagrant_box {
+  local start_dir=$1
+  local build_vagrant_dir=$2
+  local box_name=$3
+  local port=$4
 
-  configure_firewall $container_port
+  cd $build_vagrant_dir
+  packer_file=${box_name}.pkr.hcl
+  packer build $packer_file 1>&2
 
-  # Fire up the docker container
-  docker run --rm -d --name $container_name -p ${container_port}:22 $container_tag
+  cd $start_dir
+  echo "$build_vagrant_dir/output-${box_name}/package.box"
+}
 
-  # Because we are likely going to run this multiple times and idempotency is
-  # king, we want to ensure that we do not already have a set of keys for
-  # this docker container.
-  ssh-keygen -f "/home/rchapin/.ssh/known_hosts" -R "[localhost]:$container_port"
+#---  FUNCTION  ----------------------------------------------------------------
+#          NAME:  initialize_vagrant_box
+#   DESCRIPTION:
+#-------------------------------------------------------------------------------
+function initialize_vagrant_box {
+  local start_dir=$1
+  local build_vagrant_dir=$2
+  local box_name=$3
+  local box_port=$4
+  local box_path=$5
+
+  cd $build_vagrant_dir
+
+  # Create an instance of the box
+  vagrant init $box_name
+  vagrant box add --force $box_name $box_path
+
+  # Update the Vagrant file configs to add the proper forwarded port
+  sed -i '/^end/d' Vagrantfile
+  # TODO, clean this up with a heredoc
+  echo "  config.vm.network \"forwarded_port\", guest: 22, host: $box_port" >> Vagrantfile
+  echo "  config.vm.provider \"virtualbox\" do |v|" >> Vagrantfile
+  echo "    v.memory = 2816" >> Vagrantfile
+  echo "  end" >> Vagrantfile
+  echo "end" >> Vagrantfile
+
+  # Because we are likely going to run this multiple times and idempotency is king, we want to
+  # ensure that we do not already have a set of keys for this docker box.
+  ssh-keygen -f "/home/rchapin/.ssh/known_hosts" -R "[localhost]:$box_port"
+
+  vagrant up
 
   # Set-up a retry loop that waits until we can establish a TCP connection to the specified port
   while true
@@ -224,9 +254,14 @@ function initialize_docker_container {
     sleep 1
   done
 
-  # ssh to the docker container automatically accepting the host keys and then stop it
-  ssh -p $container_port -i $WS_SETUP_INTTEST_SSH_IDENTITY_FILE -o StrictHostKeyChecking=no root@localhost hostname
-  docker stop $container_name
+  # ssh to the vm automatically accepting the host keys and then stop it
+  ssh -p $box_port -i $WS_SETUP_INTTEST_SSH_IDENTITY_FILE -o StrictHostKeyChecking=no root@localhost hostname
+  vagrant halt
+
+  # Configure the firewall on the test machine to enable connections to this forwarded port
+  configure_firewall $box_port
+
+  cd $start_dir
 }
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -271,6 +306,37 @@ function create_virtenv {
   source $WS_SETUP_INTTEST_VIRTENV_DIR/bin/activate
   pip install -U setuptools pip coverage
   pip install -r requirements.txt
+  pip install -r requirements_test-dev.txt
+}
+
+#---  FUNCTION  ----------------------------------------------------------------
+#          NAME:  create_pytest_ini
+#   DESCRIPTION:  Create the pytest.ini file required for running tests via VSCode
+#-------------------------------------------------------------------------------
+function create_pytest_ini {
+  OUTFILE=pytest.ini
+  cat << EOF > $OUTFILE
+[pytest]
+log_cli = 1
+log_cli_level = INFO
+log_cli_format = %(asctime)s,%(levelname)s,%(module)s:%(lineno)s,%(message)s
+log_cli_date_format=%Y-%m-%d %H:%M:%S
+env =
+EOF
+  env | grep WS_ | sort | sed 's/^/    /' >> $OUTFILE
+}
+
+#---  FUNCTION  ----------------------------------------------------------------
+#          NAME:  clone_pydeploy_configs_repo
+#   DESCRIPTION:  Clones the pydeploy-configs repo
+#-------------------------------------------------------------------------------
+function clone_pydeploy_configs_repo {
+  # Ensure that the target repo dir does not already exist
+  rm -rf $WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_DIR
+  git clone https://github.com/rchapin/pydeploy-configs.git $WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_DIR
+  start_dir=$(pwd)
+  cd $WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_DIR && git checkout $WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_REFSPEC
+  cd $start_dir
 }
 
 #---  FUNCTION  ----------------------------------------------------------------
@@ -287,15 +353,17 @@ function setup {
   dirs=(
     "$WS_SETUP_INTTEST_PARENT_DIR"
     "$WS_SETUP_INTTEST_CONFIG_DIR"
-    "$WS_SETUP_INTTEST_DOCKER_DIR"
+    "$WS_SETUP_INTTEST_VAGRANT_DIR"
   )
   for dir in "${dirs[@]}"
   do
     mkdir -p $dir
   done
 
+  create_pytest_ini
   install_dependencies
-  build_docker_test_image
+  clone_pydeploy_configs_repo
+  setup_vagrant_boxes
   create_virtenv
   echo "Test environment setup complete"
 }
@@ -310,14 +378,7 @@ function teardown {
   echo "Deleting test dirs"
   rm -rf $WS_SETUP_INTTEST_PARENT_DIR
 
-  # # It is possible that there is no container or images in existence, but we will stop any running
-  # # container and delete the image to ensure a clean slate.
-  # echo "Stopping docker container and deleting test image"
-  # set +e
-  # docker stop $WS_SETUP_INTTEST_CONTAINER_NAME 2> /dev/null
-  # docker rmi $WS_SETUP_INTTEST_IMAGE_NAME 2> /dev/null
-  # set -e
-
+  # TODO: figure out if we can clean-up any vagrant vms
   echo "Test environment clean-up complete"
 }
 
@@ -349,7 +410,7 @@ function run_tests {
     coverage run --append -m unittest discover -s workstationsetup/integration_tests --failfast # add -k $test_name
   fi
 
-  coverage report workstationsetup/*.py
+  coverage report -m --omit *__init__*,workstationsetup/tests/*.py,workstationsetup/integration_tests/*.py
   set +e
 }
 
@@ -374,10 +435,7 @@ Options:
   -l LEAVE
      Do not clean any existing environment previously setup.  By default the
      environment is cleaned and re-installed with each invocation of this
-     script.
-
-  -t TEARDOWN
-     Teardown the test environment on the configured test host
+     script and then torn down after the test completes.
 
   --setup-only Only run the setup without running the tests.
 
@@ -386,6 +444,10 @@ Options:
     the defaults with those env vars defined in the -e file, but do not run the
     test.  To achieve this goal, you must source this script instead of running
     it as an executable script.
+
+  --teardown-only
+    Only tear down the test environment.  Do not exectute any setup or run any
+    of the tests.
 
     Example:
 
@@ -405,14 +467,13 @@ EOF
 #
 HELP=0
 LEAVE=0
-TEARDOWN=0
 TEARDOWN_ONLY=0
 SETUP_ONLY=0
 EXPORT_ENV_VARS_ONLY=0
 OVERRIDE_ENV_VARS_PATH=0
 OMIT_INTEGRATION_TESTS=0
 
-PARSED_OPTIONS=`getopt -o hltie: -l export-env-vars-only,setup-only,teardown-only -- "$@"`
+PARSED_OPTIONS=`getopt -o hlie: -l export-env-vars-only,setup-only,teardown-only -- "$@"`
 
 # Check to see if the getopts command failed
 if [ $? -ne 0 ];
@@ -446,11 +507,6 @@ while true; do
          shift
          ;;
 
-      -t)
-         TEARDOWN=1
-         shift
-         ;;
-
       --export-env-vars-only)
          EXPORT_ENV_VARS_ONLY=1
          shift
@@ -473,10 +529,17 @@ while true; do
    esac
 done
 
-if [ "$HELP" -eq 1 ];
+if [ "$HELP" -eq 1 ]
 then
    usage
    exit
+fi
+
+if [ "$LEAVE" -eq 1 ]
+then
+  # Ensure that we pass through the intention to leave the test scaffolding in place to the test
+  # code itself.
+  export WS_SETUP_INTTEST_VAGRANT_BOX_REUSE=True
 fi
 
 ################################################################################
@@ -503,9 +566,7 @@ EOF
   fi
 
 else
-  #
-  # If we are to do more than export env vars, continue processing
-  #
+  # If we are to do more than export env vars, continue processing.
   if [ "$TEARDOWN_ONLY" -eq 1 ]
   then
     teardown
@@ -520,18 +581,15 @@ else
 
   if [ "$LEAVE" -eq 0 ]
   then
-    # We are to run setup which will clean any existing test environment
+    # We are to run setup which will clean any existing test environment.
     setup
   fi
 
   time run_tests
 
-  if [ "$TEARDOWN" -eq 1 ]
+  if [ "$LEAVE" -eq 0 ]
   then
-    #
-    # We should teardown the test setup environment
-    #
+    # We should not leave the test environment and should tear it down.
     teardown
   fi
 fi
-
