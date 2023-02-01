@@ -380,42 +380,129 @@ class ITBase(unittest.TestCase, ABC):
     #
 
     def _test_configure_git(self):
+        def exec_configure_git_test(args: dict, expected_git_config_values: set[str]):
+            # Delete the .gitconfig file for the test user before each test
+            self.setup_vagrant_box_fab_connection()
+            r = self.VAGRANT_BOX_FAB_CONNECTION.sudo(
+                f'bash -c "cd /home/{self.TEST_USER} && rm -f .gitconfig"', user=self.TEST_USER
+            )
+            self.assertTrue(r.ok)
+
+            self.setup_sub_test_and_run(args)
+            r = self.VAGRANT_BOX_FAB_CONNECTION.sudo("git config --list", user=self.TEST_USER)
+            self.assertTrue(
+                r.ok, "Unable to execute git config command to test result of configure-git task"
+            )
+            # Build a dict keyed by the gitconfig entries
+            lines = r.stdout.split("\n")
+            actual_git_config_values = {}
+            for line in lines:
+                if line.isspace() or len(line) == 0:
+                    continue
+                line_tokens = line.split("=")
+                actual_git_config_values[line_tokens[0]] = line_tokens[1]
+            self.assertDictEqual(expected_git_config_values, actual_git_config_values)
+
         test_email_address = f"{self.TEST_USER}@example.com"
         test_name = "Joe Blogs"
-        args = self.get_test_program_args(
-            args=[
-                "configure-git",
-                "--user",
-                self.TEST_USER,
-                "--user-email",
-                test_email_address,
-                "--user-full-name",
-                test_name,
-                "--editor",
-                "vim",
-            ]
-        )
-        self.setup_sub_test_and_run(args)
+        test_data = [
+            {
+                # Test without configuring the default pull reconcilliaton method
+                "args": self.get_test_program_args(
+                    args=[
+                        "configure-git",
+                        "--user",
+                        self.TEST_USER,
+                        "--user-email",
+                        test_email_address,
+                        "--user-full-name",
+                        test_name,
+                        "--editor",
+                        "vim",
+                    ]
+                ),
+                "expected_git_config_values": {
+                    "user.name": test_name,
+                    "user.email": test_email_address,
+                    "core.editor": "vim",
+                },
+            },
+            {
+                # Test configuring pull resolution permutations
+                "args": self.get_test_program_args(
+                    args=[
+                        "configure-git",
+                        "--user",
+                        self.TEST_USER,
+                        "--user-email",
+                        test_email_address,
+                        "--user-full-name",
+                        test_name,
+                        "--editor",
+                        "vim",
+                        "--default-pull-reconcile-method",
+                        "rebase_false",
+                    ]
+                ),
+                "expected_git_config_values": {
+                    "user.name": test_name,
+                    "user.email": test_email_address,
+                    "core.editor": "vim",
+                    "pull.rebase": "false",
+                },
+            },
+            {
+                # Test configuring pull resolution permutations
+                "args": self.get_test_program_args(
+                    args=[
+                        "configure-git",
+                        "--user",
+                        self.TEST_USER,
+                        "--user-email",
+                        test_email_address,
+                        "--user-full-name",
+                        test_name,
+                        "--editor",
+                        "vim",
+                        "--default-pull-reconcile-method",
+                        "rebase_true",
+                    ]
+                ),
+                "expected_git_config_values": {
+                    "user.name": test_name,
+                    "user.email": test_email_address,
+                    "core.editor": "vim",
+                    "pull.rebase": "true",
+                },
+            },
+            {
+                # Test configuring pull resolution permutations
+                "args": self.get_test_program_args(
+                    args=[
+                        "configure-git",
+                        "--user",
+                        self.TEST_USER,
+                        "--user-email",
+                        test_email_address,
+                        "--user-full-name",
+                        test_name,
+                        "--editor",
+                        "vim",
+                        "--default-pull-reconcile-method",
+                        "ff_only",
+                    ]
+                ),
+                "expected_git_config_values": {
+                    "user.name": test_name,
+                    "user.email": test_email_address,
+                    "core.editor": "vim",
+                    "pull.ff": "only",
+                },
+            },
+        ]
 
-        expected_git_config_values = {
-            "user.name": test_name,
-            "user.email": test_email_address,
-            "core.editor": "vim",
-        }
-
-        r = self.VAGRANT_BOX_FAB_CONNECTION.sudo("git config --list", user=self.TEST_USER)
-        self.assertTrue(
-            r.ok, "Unable to execute git config command to test result of configure-git task"
-        )
-        # Build a dict keyed by the gitconfig entries
-        lines = r.stdout.split("\n")
-        actual_git_config_values = {}
-        for line in lines:
-            if line.isspace() or len(line) == 0:
-                continue
-            line_tokens = line.split("=")
-            actual_git_config_values[line_tokens[0]] = line_tokens[1]
-        self.assertDictEqual(expected_git_config_values, actual_git_config_values)
+        for t in test_data:
+            exec_configure_git_test(t["args"], t["expected_git_config_values"])
 
     def _test_install_cert_into_jvm(self):
         cert_file_path = None
@@ -589,7 +676,9 @@ class ITBase(unittest.TestCase, ABC):
 
         def validate_redshift_results(expected_config_lines: list[str]) -> None:
             _validate_redshift_results(expected_config_lines, remote_actual_config_file_path)
-            _validate_redshift_results(expected_redshift_systemd_lines, remote_actual_systemd_file_path)
+            _validate_redshift_results(
+                expected_redshift_systemd_lines, remote_actual_systemd_file_path
+            )
 
         def _validate_redshift_results(expected_lines: list[str], remote_file_path: str) -> None:
             local_file_path = os.path.join(temp_dir.name, "actual_file")
@@ -651,8 +740,6 @@ class ITBase(unittest.TestCase, ABC):
                 "location-provider=geoclue2\n",
             ]
             validate_redshift_results(expected_redshift_config_lines)
-
-
 
         except Exception as e:
             raise (e)

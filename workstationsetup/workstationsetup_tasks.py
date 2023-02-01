@@ -137,14 +137,30 @@ class WorkstationSetup(Tasks):
             "user_email": ARG_HELP_USER_EMAIL,
             "user_full_name": ARG_HELP_USER_FULL_NAME,
             "editor": f"OPTIONAL - The default editor for git to user for commit messages, default={CONFIGURE_GIT_DEFAULT_EDITOR}",
+            "default_pull_reconcile_method": (
+                "OPTIONAL - Sets the default reconcilliation strategy when pulling for all branches, "
+                "default=None, which will not set this git config value. "
+                "'rebase_false' = git config pull.rebase false; (merge - the default strategy). "
+                "'rebase_true' = git config pull.rebase true;  (rebase). "
+                "'ff_only' = git config pull.ff only; (fast-forward only)."
+            ),
         },
     )
-    def configure_git(ctx, user, user_email, user_full_name, editor=CONFIGURE_GIT_DEFAULT_EDITOR):
+    def configure_git(
+        ctx,
+        user,
+        user_email,
+        user_full_name,
+        editor=CONFIGURE_GIT_DEFAULT_EDITOR,
+        default_pull_reconcile_method=None,
+    ):
         """
         Configures git for the given user with the provided user information.
         """
         for host, conn in ctx.configs.connections.items():
-            WorkstationSetup._configure_git(ctx, conn, user, user_email, user_full_name, editor)
+            WorkstationSetup._configure_git(
+                ctx, conn, user, user_email, user_full_name, editor, default_pull_reconcile_method,
+            )
 
     def _configure_git(
         ctx: Context,
@@ -153,6 +169,7 @@ class WorkstationSetup(Tasks):
         user_email: str,
         user_full_name: str,
         editor: str = CONFIGURE_GIT_DEFAULT_EDITOR,
+        default_pull_reconcile_method=None,
     ) -> None:
         logger.info(
             f"Configuring git; user={user}, user_mail={user_email}, "
@@ -161,6 +178,27 @@ class WorkstationSetup(Tasks):
         conn.sudo(command=f'git config --global user.name "{user_full_name}"', user=user)
         conn.sudo(command=f'git config --global user.email "{user_email}"', user=user)
         conn.sudo(command=f'git config --global core.editor "{editor}"', user=user)
+        if default_pull_reconcile_method:
+            cmd_prefix = "git config --global"
+            cmd = None
+            if default_pull_reconcile_method == "rebase_false":
+                cmd = f"{cmd_prefix} pull.rebase false"
+            if default_pull_reconcile_method == "rebase_true":
+                cmd = f"{cmd_prefix} pull.rebase true"
+            if default_pull_reconcile_method == "ff_only":
+                cmd = f"{cmd_prefix} pull.ff only"
+            conn.sudo(command=cmd, user=user)
+
+            """
+            rebase_false
+            - git config pull.rebase false  # merge (the default strategy)\n"
+
+                "rebase_true
+                - git config pull.rebase true   # rebase\n"
+
+                "ff_only
+                - git config pull.ff only       # fast-forward only"
+            """
 
     @staticmethod
     def get_docker_mapped_architecture(architecture) -> str:
@@ -584,7 +622,9 @@ class WorkstationSetup(Tasks):
     @task(
         pre=[Tasks.load_configs],
         post=[print_feedback],
-        help={"minikube_user": "OPTIONAL - The optional user name to required groups for the non-root user to be able to run minikube."},
+        help={
+            "minikube_user": "OPTIONAL - The optional user name to required groups for the non-root user to be able to run minikube."
+        },
     )
     def install_minikube(ctx, minikube_user=None):
         """
@@ -638,7 +678,7 @@ class WorkstationSetup(Tasks):
             "temp_night": "OPTIONAL - The night temperature which overrides the setting defined in the PyDeploy configs.",
             "brightness_day": "OPTIONAL - The day brightness which overrides the setting defined in the PyDeploy configs.",
             "brightness_night": "OPTIONAL - The night brightness which overrides the setting defined in the PyDeploy configs.",
-        }
+        },
     )
     def install_redshift(
         ctx,
@@ -768,9 +808,7 @@ class WorkstationSetup(Tasks):
     @task(
         pre=[Tasks.load_configs],
         post=[print_feedback],
-        help={
-            "max_user_watches": "OPTIONAL - The number of inotify file watches, default=524288"
-        },
+        help={"max_user_watches": "OPTIONAL - The number of inotify file watches, default=524288"},
     )
     def setup_inotify(ctx, max_user_watches=524288):
         """
