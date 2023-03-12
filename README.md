@@ -150,6 +150,7 @@ install-java-openjdk                    Installs Oracle’s free, GPL-licensed, 
 install-maven                           Installs the Apache Maven build tool.
 install-minikube                        Installs Minikube; a lightweight Kubernetes implementation that creates a K8s cluster on a VM on your local machine.
 install-packages                        Installs the base set of packages.
+install-pgadmin                         Installs PostgreSQL pgAdmin
 install-redshift                        Installs redshift, the configs, and the user-level systemd configurations
 install-slack                           Installs the Slack clent.
 install-vscode                          Installs the Visual Studio Code IDE.
@@ -215,6 +216,11 @@ task_configs:
 
 All of the unit and integration tests can be run by executing the `run-test.sh` script at the root of the repository.
 
+> If you are running the tests against a `pydeploy` development branch ensure that you first export the following environment variable
+```
+export WS_SETUP_INTTEST_PYDEPLOY_CONFIGS_REPO_REFSPEC=<refspec>
+```
+
 
 #### Debugging Task Execution
 
@@ -262,6 +268,8 @@ Use the following sample launch config to run and debug tasks in VSCode
 1. Select the workspace/project and then select **pytest pytest framework**
 1. Then select the directory that contains the tests, `workstationsetup`, and it will discover all of the tests. **NOTE** if it is unable to discover the tests check the **OUTPUT** console and select **Python** from the drop-down tab to see the details of any errors.
 1. Once that completes you will be able to run any of the tests discovered under the `Testing` side-bar.
+
+> If you are also making changes to the `pydeploy` repo you will need to make sure that you push your changes to the `pydeploy` branch and pull them in the integration test directory where `pydeploy` is cloned unless you are doing a complete teardown with each run iteration while developing which is not recommended.
 
 ### Running and Debugging Tasks from VSCode
 

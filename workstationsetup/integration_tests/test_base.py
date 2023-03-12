@@ -371,7 +371,7 @@ class ITBase(unittest.TestCase, ABC):
         if self.VAGRANT_BOX_REUSE == False:
             logger.info(f"Destroying vagrant box; self.VAGRANT_BOX_NAME={self.VAGRANT_BOX_NAME}")
             self.VAGRANT_BOX.destroy()
-            logger.info("Vagrant box destroyed self.VAGRANT_BOX_NAME={self.VAGRANT_BOX_NAME}")
+            logger.info(f"Vagrant box destroyed self.VAGRANT_BOX_NAME={self.VAGRANT_BOX_NAME}")
         if self.VAGRANT_BOX_FAB_CONNECTION:
             self.VAGRANT_BOX_FAB_CONNECTION.close()
 
@@ -657,6 +657,12 @@ class ITBase(unittest.TestCase, ABC):
         }
         actual_status = set([i for i in r.stdout.split("\n") if i != ""])
         self.assertEqual(expected_status, actual_status)
+
+    def _test_pgadmin(self):
+        args = self.get_test_program_args(["install-pgadmin"])
+        self.setup_sub_test_and_run(args)
+        expected_packages = {"pgadmin4"}
+        self._validate_installed_packages(expected_packages)
 
     def _test_install_redshift(self):
         expected_redshift_systemd_lines = [

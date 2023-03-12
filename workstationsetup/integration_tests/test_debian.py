@@ -103,6 +103,7 @@ class ITDebian(ITBase):
         self._test_install_google_cloud_cli({"google-cloud-cli"})
         self._test_install_minikube()
         self._test_install_redshift()
+        self._test_pgadmin()
 
     def _test_bootstrap(self):
         self.setup_vagrant_box_fab_connection()

@@ -159,7 +159,13 @@ class WorkstationSetup(Tasks):
         """
         for host, conn in ctx.configs.connections.items():
             WorkstationSetup._configure_git(
-                ctx, conn, user, user_email, user_full_name, editor, default_pull_reconcile_method,
+                ctx,
+                conn,
+                user,
+                user_email,
+                user_full_name,
+                editor,
+                default_pull_reconcile_method,
             )
 
     def _configure_git(
@@ -667,6 +673,24 @@ class WorkstationSetup(Tasks):
         logger.info("Installing base set of packages")
         cfgs = ctx.distro.get_task_configs("install-packages")
         packages = cfgs["packages"]
+        ctx.distro.install_package(conn=conn, packages=packages)
+
+    @task(
+        pre=[Tasks.load_configs],
+        post=[print_feedback],
+    )
+    def install_pgadmin(ctx):
+        """
+        Installs PostgreSQL pgAdmin
+        """
+        for host, conn in ctx.configs.connections.items():
+            WorkstationSetup._install_pgadmin(ctx, conn)
+
+    def _install_pgadmin(ctx: Context, conn: Connection) -> None:
+        logger.info("Installing pgadmin")
+        ctx.distro.add_repo(configs=ctx.configs, conn=conn, task="install-pgadmin")
+        task_cfgs = ctx.distro.get_task_configs("install-pgadmin")
+        packages = task_cfgs["packages"]
         ctx.distro.install_package(conn=conn, packages=packages)
 
     @task(
