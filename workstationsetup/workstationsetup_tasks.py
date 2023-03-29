@@ -392,6 +392,7 @@ class WorkstationSetup(Tasks):
         shasum_file_name = f"{binary_file_name}.sha256"
         shasum_local_file_path = None
 
+        # FIXME: use get_github abstraction function for this
         r = requests.get(
             "https://api.github.com/repos/docker/compose/releases/latest",
             verify=ctx.distro.configs.is_request_verify(),
@@ -465,6 +466,26 @@ class WorkstationSetup(Tasks):
         pre=[Tasks.load_configs],
         post=[print_feedback],
     )
+    def install_drawio(ctx):
+        """
+        Installs the Drawio desktop application.
+        """
+        temp_dir = TemporaryDirectory()
+        dependencies = {}
+        dependencies["install-drawio"] = DeveloperTools.install_drawio_get_dependencies(
+            ctx, temp_dir
+        )
+        for host, conn in ctx.configs.connections.items():
+            WorkstationSetup._install_drawio(ctx, conn, dependencies)
+        temp_dir.cleanup()
+
+    def _install_drawio(ctx: Context, conn: Connection, dependencies: dict) -> None:
+        DeveloperTools.install_drawio(ctx=ctx, conn=conn, dependencies=dependencies)
+
+    @task(
+        pre=[Tasks.load_configs],
+        post=[print_feedback],
+    )
     def install_google_cloud_cli(ctx):
         """
         Installs the google-cloud-cli program suite.
@@ -491,6 +512,7 @@ class WorkstationSetup(Tasks):
         )
         for _, conn in ctx.configs.connections.items():
             WorkstationSetup._install_gradle(ctx, conn, dependencies, version)
+        temp_dir.cleanup()
 
     def _install_gradle(
         ctx: Context, conn: Connection, dependencies: dict, version: str = None

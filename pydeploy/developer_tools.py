@@ -34,6 +34,84 @@ WantedBy = default.target
 """
 
     @staticmethod
+    def install_drawio_get_dependencies(ctx: Context, temp_dir: TemporaryDirectory) -> dict:
+        errors = []
+        retval = {}
+
+        configs = ctx.distro.configs
+        task_configs = ctx.distro.get_task_configs("install-drawio")
+        verify = ctx.distro.configs.is_request_verify()
+        artifact_url, hashes_url = Utils.get_github_release_info(
+            url=task_configs["github_release_url"],
+            artifact_regex=task_configs["artifact_regex"],
+            hashes_regex=task_configs["hashes_regex"],
+            verify=verify,
+        )
+        if artifact_url is None or hashes_url is None:
+            errors.append(
+                f"Unable to get url for artfact or hashes; artifact_url={artifact_url}, hashes_url={hashes_url}"
+            )
+            retval["errors"] = errors
+            return retval
+
+        # Download the artifact and validate the checksum
+        artifact_filename = artifact_url.split("/")[-1]
+        hashes_filename = hashes_url.split("/")[-1]
+        artifact_local_path = os.path.join(temp_dir.name, artifact_filename)
+        hashes_local_path = os.path.join(temp_dir.name, hashes_filename)
+        Utils.download_file(
+            configs=configs,
+            url=artifact_url,
+            target_local_path=artifact_local_path,
+        )
+        Utils.download_file(
+            configs=configs,
+            url=hashes_url,
+            target_local_path=hashes_local_path,
+        )
+
+        # Validate the checksum for the downloaded file
+        checksum_lines = Utils.get_lines_from_file(
+            path=hashes_local_path, pattern=artifact_filename
+        )
+        if len(checksum_lines) != 1:
+            errors.append(
+                "We did not extract a single checksum line from the downloaded checksums; "
+                f"artifact_filename={artifact_filename}, "
+                f"hashes_local_path={hashes_local_path}, "
+                f"checksum_lines={checksum_lines}",
+            )
+            retval["errors"] = errors
+            return retval
+
+        checksum = checksum_lines[0].split()[1]
+
+        if not Utils.file_checksum(
+            file_path=artifact_local_path, check_sum=checksum, hash_algo=HashAlgo.SHA256SUM
+        ):
+            errors.append(
+                "Checksum did not match; "
+                f"artifact_filename={artifact_filename}, "
+                f"hashes_local_path={hashes_local_path}, "
+                f"checksum={checksum}",
+            )
+            retval["errors"] = errors
+            return retval
+
+        retval["artifact_local_path"] = artifact_local_path
+        retval["artifact_filename"] = artifact_filename
+        return retval
+
+    @staticmethod
+    def install_drawio(ctx: Context, conn: Connection, dependencies: dict) -> None:
+        artifact_remote_path = os.path.join(
+            "/var/tmp/", dependencies["install-drawio"]["artifact_filename"]
+        )
+        conn.put(dependencies["install-drawio"]["artifact_local_path"], artifact_remote_path)
+        packages_paths = [artifact_remote_path]
+        ctx.distro.install_local_package(conn=conn, packages_paths=packages_paths)
+
+    @staticmethod
     def install_minikube_get_dependencies(
         ctx: Context, architectures: dict, temp_dir: TemporaryDirectory = None, version: str = None
     ) -> dict:

@@ -536,6 +536,11 @@ class ITBase(unittest.TestCase, ABC):
             if temp_dir:
                 temp_dir.cleanup()
 
+    def _test_install_drawio(self, expected_packages: set):
+        args = self.get_test_program_args(["install-drawio"])
+        self.setup_sub_test_and_run(args)
+        self._validate_installed_packages(expected_packages)
+
     def _test_install_google_cloud_cli(self, expected_packages: set):
         args = self.get_test_program_args(["install-google-cloud-cli"])
         self.setup_sub_test_and_run(args)

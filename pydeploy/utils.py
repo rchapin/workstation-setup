@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import re
 import requests
 import sys
 import yaml
@@ -98,6 +99,49 @@ class Utils(object):
             return r.stdout.strip()
         else:
             raise Exception(f"Unable to get file type, cmd={cmd}, stderr={r.stderr}")
+
+    @staticmethod
+    def get_github_release_info(url: str, artifact_regex: str, hashes_regex: str, verify: bool=True) -> Tuple[str, str]:
+
+        def get_url(pattern: str, asset_json: dict) -> str:
+            name = asset_json["name"]
+            result = re.match(pattern, name)
+            if result:
+                return asset_json["browser_download_url"]
+            else:
+                return None
+
+        r = requests.get(url=url, verify=verify)
+        if not r.ok:
+            raise Exception(f"Unable to get github release info json; url={url}, r={r}")
+
+        release_json = r.json()
+        artifact_url = None
+        hashes_url = None
+        for asset in release_json["assets"]:
+            if artifact_url is None:
+                artifact_url = get_url(artifact_regex, asset)
+            if hashes_url is None:
+                hashes_url = get_url(hashes_regex, asset)
+            if artifact_url is not None and hashes_url is not None:
+                break
+
+        return artifact_url, hashes_url
+
+    @staticmethod
+    def get_lines_from_file(path: str, pattern: str) -> list[str]:
+        retval = []
+
+        with open(path, "r") as f:
+            while True:
+                line = f.readline().strip()
+                if not line:
+                    break
+                result = re.match(pattern, line)
+                if result:
+                    retval.append(line)
+
+        return retval
 
     @staticmethod
     def hydrate(templates: list[str], values: dict) -> list[str]:

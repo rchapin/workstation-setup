@@ -104,6 +104,7 @@ class ITDebian(ITBase):
         self._test_install_minikube()
         self._test_install_redshift()
         self._test_pgadmin()
+        self._test_install_drawio({"draw.io"})
 
     def _test_bootstrap(self):
         self.setup_vagrant_box_fab_connection()
