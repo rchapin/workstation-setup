@@ -166,7 +166,7 @@ class Distribution(ABC):
         conn: Connection,
         temp_dir: TemporaryDirectory,
         package_file_path: str,
+        public_key_file_path: str,
         verify_configs: dict,
-        configs: Configs,
     ) -> bool:
         pass

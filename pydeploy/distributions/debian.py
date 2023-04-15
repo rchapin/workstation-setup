@@ -84,21 +84,85 @@ class Debian(Distribution):
 
     def verify_package(
         self,
+        ctx: Context,
         conn: Connection,
         temp_dir: TemporaryDirectory,
         package_file_path: str,
+        public_key_file_path: str,
         verify_configs: dict,
-        configs: Configs,
     ) -> bool:
-        # Download the package maintainer's public key and then put it on the remote host
-        public_key_local_path = os.path.join(temp_dir.name, verify_configs["public_key_filename"])
-        public_key_remote_path = os.path.join("/var/tmp/", verify_configs["public_key_filename"])
-        Utils.download_file(
-            configs=configs,
-            url=verify_configs["public_key_url"],
-            target_local_path=public_key_local_path,
-        )
-        conn.put(public_key_local_path, public_key_remote_path)
+        """
+        verify_package will, given that the package and public key are already on the
+        remote host verify the package based on the public signature.
+        """
+
+        # There are (at least) two different methods for signing and verifying debian
+        # packages that are completely different.  Check the verify_configs for the
+        # specific implementation required
+        retval = None
+        mode = verify_configs["mode"]
+        if mode == "debsigs":
+            retval = self.verify_package_debsig(
+                ctx=ctx,
+                conn=conn,
+                temp_dir=temp_dir,
+                package_file_path=package_file_path,
+                public_key_file_path=public_key_file_path,
+                verify_configs=verify_configs,
+            )
+        elif mode == "dpkg-sig":
+            retval = self.verify_package_dpkgsig(
+                ctx=ctx,
+                conn=conn,
+                temp_dir=temp_dir,
+                package_file_path=package_file_path,
+                public_key_file_path=public_key_file_path,
+                verify_configs=verify_configs,
+            )
+        else:
+            raise Exception(f"Unknown verify_configs.mode; mode={mode}")
+
+        return retval
+
+    def verify_package_dpkgsig(
+        self,
+        ctx: Context,
+        conn: Connection,
+        temp_dir: TemporaryDirectory,
+        package_file_path: str,
+        public_key_file_path: str,
+        verify_configs: dict,
+    ) -> bool:
+        # Ensure that required packages are installed on the target host
+        packages = ["gpg", "dpkg-sig"]
+        ctx.distro.install_package(conn=conn, packages=packages)
+        r = conn.run(f"gpg --import {public_key_file_path}")
+        if r.return_code != 0:
+            raise Exception(
+                f"importing gpg key; public_key_file_path={public_key_file_path}, r.stderr={r.stderr}"
+            )
+        r = conn.run(f"dpkg-sig --verify {package_file_path}")
+        if r.return_code == 0:
+            if "GOODSIG" in r.stdout:
+                return True
+            else:
+                return False
+        else:
+            raise Exception(
+                f"verifying gpg key; public_key_file_path={public_key_file_path}, r.stderr={r.stderr}"
+            )
+
+    def verify_package_debsig(
+        self,
+        ctx: Context,
+        conn: Connection,
+        temp_dir: TemporaryDirectory,
+        package_file_path: str,
+        public_key_file_path: str,
+        verify_configs: dict,
+    ) -> bool:
+        # Ensure that required packages are installed on the target host
+        ctx.distro.install_package(conn=conn, packages=["debsig-verify"])
 
         # Create directories to store debsigs policies and keyrings for the public key
         conn.run(f"rm -rf {verify_configs['debsig_keyring_dir']}")
@@ -113,7 +177,7 @@ class Debian(Distribution):
 
         # Import the public key into the corresponding debsigs keyring:
         conn.run(
-            f"gpg --no-default-keyring --keyring {keyring_path} --import {public_key_remote_path}"
+            f"gpg --no-default-keyring --keyring {keyring_path} --import {public_key_file_path}"
         )
 
         # Write out the policy file to the temp dir, then move it to the correct location and update
@@ -131,7 +195,6 @@ class Debian(Distribution):
 
         # Finally, verify the package signature
         r = conn.run(f"debsig-verify {package_file_path}")
-        conn.run(f"rm -f {public_key_remote_path}")
         if r.return_code == 0:
             return True
         else:

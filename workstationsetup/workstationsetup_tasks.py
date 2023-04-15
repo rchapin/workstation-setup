@@ -13,6 +13,8 @@ from pydeploy.utils import Utils, HashAlgo
 from pydeploy.java import Java
 from pydeploy.gcp import Gcp
 from pydeploy.developer_tools import DeveloperTools
+from pydeploy.slack import Slack
+from pydeploy.zoom import Zoom
 
 logging.basicConfig(
     format="%(asctime)s,%(levelname)s,%(module)s,%(message)s",
@@ -58,7 +60,7 @@ ARG_HELP_INSTALL_VERSION = (
 )
 
 ARG_HELP_JVM_TRUST_STORE_PASSWORD_OPTIONAL = (
-    "OPTIONAL - The password for the currently configured jvms trust store. "
+    "OPTIONAL - The password for the currently configured JVM's trust store. "
     "Only add this argument if you have changed the default after installing the jvm."
 )
 
@@ -138,7 +140,7 @@ class WorkstationSetup(Tasks):
             "user_full_name": ARG_HELP_USER_FULL_NAME,
             "editor": f"OPTIONAL - The default editor for git to user for commit messages, default={CONFIGURE_GIT_DEFAULT_EDITOR}",
             "default_pull_reconcile_method": (
-                "OPTIONAL - Sets the default reconcilliation strategy when pulling for all branches, "
+                "OPTIONAL - Sets the default reconciliation strategy when pulling for all branches, "
                 "default=None, which will not set this git config value. "
                 "'rebase_false' = git config pull.rebase false; (merge - the default strategy). "
                 "'rebase_true' = git config pull.rebase true;  (rebase). "
@@ -471,6 +473,11 @@ class WorkstationSetup(Tasks):
         Installs the Drawio desktop application.
         """
         temp_dir = TemporaryDirectory()
+        # The dependencies dict is designed to contain a key for each installation task.
+        # The value for each is a dict that contains specific dependencies, or paths to
+        # dependencies for that task.  In most cases is is paths to artifacts that reside
+        # on the deployment server that are downloaded or created one time and then put
+        # to each of the hosts on which the installation task is to be run.
         dependencies = {}
         dependencies["install-drawio"] = DeveloperTools.install_drawio_get_dependencies(
             ctx, temp_dir
@@ -791,48 +798,20 @@ class WorkstationSetup(Tasks):
     )
     def install_slack(ctx):
         """
-        Installs the Slack clent.
+        Installs the Slack client.
         """
+        temp_dir = TemporaryDirectory()
+        dependencies = {
+            "install-slack": Slack.get_dependencies(ctx, temp_dir)
+        }
+
         for host, conn in ctx.configs.connections.items():
-            WorkstationSetup._install_slack(ctx, conn)
+            WorkstationSetup._install_slack(ctx, conn, temp_dir, dependencies)
 
-    def _install_slack(ctx: Context, conn: Connection) -> None:
-        configs = ctx.distro.configs
-        task_configs = ctx.distro.get_task_configs("install-slack")
-        temp_dir = None
-        try:
-            temp_dir = TemporaryDirectory()
-            package_url = f"{task_configs['download_url_prefix']}/{task_configs['package']}"
-            package_local_path = os.path.join(temp_dir.name, task_configs["package"])
-            package_remote_path = os.path.join("/var/tmp/", task_configs["package"])
-            Utils.download_file(
-                configs=configs,
-                url=package_url,
-                target_local_path=package_local_path,
-            )
-            conn.put(package_local_path, package_remote_path)
+        temp_dir.cleanup()
 
-            if ctx.distro.verify_package(
-                conn=conn,
-                temp_dir=temp_dir,
-                package_file_path=package_remote_path,
-                verify_configs=task_configs["verification"],
-                configs=configs,
-            ):
-                packages_path = [package_remote_path]
-                ctx.distro.install_local_package(conn=conn, packages_paths=packages_path)
-            else:
-                raise Exception(
-                    f"Unable to verify package; package_remote_path={package_remote_path}"
-                )
-
-        except Exception as e:
-            logger.error(e)
-            raise (e)
-        finally:
-            conn.run(f"rm -f {package_remote_path}")
-            if temp_dir:
-                temp_dir.cleanup()
+    def _install_slack(ctx: Context, conn: Connection, temp_dir: TemporaryDirectory, dependencies: dict) -> None:
+        Slack.install(ctx, conn, temp_dir, dependencies)
 
     @task(
         pre=[Tasks.load_configs],
@@ -874,3 +853,26 @@ class WorkstationSetup(Tasks):
         conn.run(f"chmod 644 {inotify_remote_file_path}")
         conn.run("sysctl -p --system")
         temp_dir.cleanup()
+
+    @task(
+        pre=[Tasks.load_configs],
+        post=[print_feedback],
+    )
+    def install_zoom(ctx):
+        """
+        Installs the Zoom client.
+        """
+        temp_dir = TemporaryDirectory()
+        dependencies = {
+            "install-zoom": Zoom.get_dependencies(ctx, temp_dir)
+        }
+
+        for host, conn in ctx.configs.connections.items():
+            WorkstationSetup._install_zoom(ctx, conn, temp_dir, dependencies)
+
+        temp_dir.cleanup()
+
+    def _install_zoom(
+        ctx: Context, conn: Connection, temp_dir: TemporaryDirectory, dependencies: dict
+    ) -> None:
+        Zoom.install(ctx, conn, temp_dir, dependencies)

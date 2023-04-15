@@ -758,6 +758,11 @@ class ITBase(unittest.TestCase, ABC):
             if temp_dir is not None:
                 temp_dir.cleanup()
 
+    def _test_install_zoom(self, expected_packages: set):
+        args = self.get_test_program_args(["install-zoom"])
+        self.setup_sub_test_and_run(args)
+        self._validate_installed_packages(expected_packages)
+
     def _test_setup_inotify(self):
         args = self.get_test_program_args(["setup-inotify", "--max-user-watches", "6476476"])
         self.setup_sub_test_and_run(args)

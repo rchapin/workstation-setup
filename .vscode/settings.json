@@ -6,4 +6,27 @@
     "-s",
     "-log_cli=true"
   ],
+  "cSpell.words": [
+    "adoptium",
+    "changeit",
+    "dearmor",
+    "debsig",
+    "debsigs",
+    "distro",
+    "dpkg",
+    "dpkgsig",
+    "drawio",
+    "gitconfigs",
+    "idempotently",
+    "inotify",
+    "intellij",
+    "keyrings",
+    "noout",
+    "pgadmin",
+    "PYDEPLOY",
+    "temurin",
+    "VIRTENV",
+    "workstationsetup",
+    "xfce"
+  ],
 }

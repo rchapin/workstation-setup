@@ -101,8 +101,9 @@ class Utils(object):
             raise Exception(f"Unable to get file type, cmd={cmd}, stderr={r.stderr}")
 
     @staticmethod
-    def get_github_release_info(url: str, artifact_regex: str, hashes_regex: str, verify: bool=True) -> Tuple[str, str]:
-
+    def get_github_release_info(
+        url: str, artifact_regex: str, hashes_regex: str, verify: bool = True
+    ) -> Tuple[str, str]:
         def get_url(pattern: str, asset_json: dict) -> str:
             name = asset_json["name"]
             result = re.match(pattern, name)

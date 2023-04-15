@@ -46,7 +46,7 @@ class ITDebian(ITBase):
         self.test_task_configs = IntegrationTestUtils.create_base_configs(
             distro=Distro.DEBIAN, version="11", window_manager=WindowManager.XFCE4
         )
-        # Add some APPEND and OVERRIDE configs to the test_task_configs that will excersize the code
+        # Add some APPEND and OVERRIDE configs to the test_task_configs that will exercise the code
         # the enables users to extend the default configs.
         self.test_task_configs["task_configs"] = {
             "install-packages": {
@@ -105,6 +105,7 @@ class ITDebian(ITBase):
         self._test_install_redshift()
         self._test_pgadmin()
         self._test_install_drawio({"draw.io"})
+        self._test_install_zoom({"zoom"})
 
     def _test_bootstrap(self):
         self.setup_vagrant_box_fab_connection()
