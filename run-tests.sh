@@ -392,12 +392,6 @@ function run_tests {
   set -e
   source $WS_SETUP_INTTEST_VIRTENV_DIR/bin/activate
 
-  # FIXME:  This needs to get sorted out better.  Right now to avoid having to specify the distro on
-  # each call we are using an env var.  I don't think that is going to work because there are more than
-  # a few places, this included, that we have to define one so that we don't throw an exception that it
-  # is missing.  Once we figure that out, we can remove this.
-  export WS_SETUP_DISTRO=debian_11
-
   # Run the unit tests
   echo "======================================================================="
   echo "Running the unit tests"

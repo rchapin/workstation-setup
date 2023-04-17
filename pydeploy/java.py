@@ -47,8 +47,6 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
 
     @staticmethod
     def install_cert(
-        # FIXME
-        ctx: Context,
         conn: Connection,
         cert_file_name: str,
         local_cert_path: str,
@@ -108,14 +106,9 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
 
     @staticmethod
     def install_gradle_get_dependencies(
-        ctx: Context, temp_dir: TemporaryDirectory = None, version: str = None
+        ctx: Context, temp_dir: TemporaryDirectory, version: str = None
     ) -> dict:
         retval = {}
-
-        managed_temp_dir = False
-        if temp_dir is None:
-            managed_temp_dir = True
-            temp_dir = TemporaryDirectory()
 
         task_configs = ctx.distro.get_task_configs("install-gradle")
         configs = ctx.distro.configs
@@ -149,7 +142,7 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
         r = requests.get(url=version_entry["checksumUrl"], verify=configs.is_request_verify())
         shasum = r.text.strip()
         if not Utils.file_checksum(
-            file_path=zipfile_local_file_path, check_sum=shasum, hash_algo=HashAlgo.SHA256SUM
+            file_path=zipfile_local_file_path, checksum=shasum, hash_algo=HashAlgo.SHA256SUM
         ):
             retval["errors"] = [
                 f"Downloaded file checksum does not match; zipfile_local_file_path={zipfile_local_file_path}, shasum={shasum}"
@@ -157,36 +150,34 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
             return retval
         retval[Java.GRADLE_DEPENDENCY_COMPRESSED_FILE_PATH] = zipfile_local_file_path
         retval[Java.GRADLE_DEPENDENCY_COMPRESSED_FILE_NAME] = zipfile_file_name
-
-        if managed_temp_dir:
-            temp_dir.cleanup()
-
         return retval
 
     @staticmethod
-    def install_intellij(ctx: Context, conn: Connection, version: str = None):
-        temp_dir = None
-        try:
-            temp_dir = TemporaryDirectory()
-            task_configs = ctx.distro.get_task_configs("install-intellij")
+    def install_intellij_get_dependencies(
+        ctx: Context, temp_dir: TemporaryDirectory, architectures: set, version: str = None
+    ) -> dict:
+        task_configs = ctx.distro.get_task_configs("install-intellij")
+        version = version if version is not None else task_configs["version"]
+
+        retval_architectures = {}
+        for architecture in architectures:
             # IntelliJ does not have a consistent way of naming their packages/urls.  They only add the
             # architecture if it is aarch64, AFAIK.  So, we lookup the architecture that IntelliJ uses
             # and then based on the result generate a string that we will use for the
             # version_architecture key in the url string substitution.
-            os_arch = ctx.distro.get_architecture(conn)
-            if os_arch not in Java.INTELLIJ_ARCH_MAP:
+            if architecture not in Java.INTELLIJ_ARCH_MAP:
                 raise Exception(
-                    f"Architecture key not found in Java.INTELLIJ_ARCH_MAP; os_arch={os_arch}"
+                    f"Architecture key not found in Java.INTELLIJ_ARCH_MAP; architecture={architecture}"
                 )
-            intellij_arch = Java.INTELLIJ_ARCH_MAP[os_arch]
+            intellij_arch = Java.INTELLIJ_ARCH_MAP[architecture]
             version_and_architecture = None
             if Utils.is_string_empty(intellij_arch):
                 # We need to create a string for the substitution that ONLY includes the version.
-                version_and_architecture = task_configs["version"]
+                version_and_architecture = version
             else:
                 # We need to create a string for the substitution that includes both the version and the
                 # architecture.
-                version_and_architecture = f"{task_configs['version']}-{intellij_arch}"
+                version_and_architecture = f"{version}-{intellij_arch}"
 
             gz_download_url = Template(task_configs["url_template"]).substitute(
                 version_and_architecture=version_and_architecture
@@ -203,7 +194,7 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
             shasum = r.text.split()[0]
             if not Utils.file_checksum(
                 file_path=local_gz_download_file_path,
-                check_sum=shasum,
+                checksum=shasum,
                 hash_algo=HashAlgo.SHA256SUM,
             ):
                 raise Exception(
@@ -211,22 +202,30 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
                     f"gz_download_path={local_gz_download_file_path}, shasum={shasum}"
                 )
 
-            target_parent_dir = "/usr/local"
-            target_symlink = os.path.join(target_parent_dir, "intellij")
-            remote_gz_file_path = os.path.join("/var/tmp/", gz_download_file_name)
-            conn.put(local_gz_download_file_path, remote_gz_file_path)
-            Utils.unpack_file(
-                conn=conn,
-                archive_file_path=remote_gz_file_path,
-                archive_file_type=ArchiveType.TAR_GZ,
-                target_parent_dir=target_parent_dir,
-                symlink_path=target_symlink,
-            )
-        except Exception as e:
-            raise (e)
-        finally:
-            if temp_dir is not None:
-                temp_dir.cleanup()
+            arch_artifacts = {
+                "filename": gz_download_file_name,
+                "local_file_path": local_gz_download_file_path,
+            }
+            retval_architectures[architecture] = arch_artifacts
+
+        return {"architectures": retval_architectures}
+
+    @staticmethod
+    def install_intellij(ctx: Context, conn: Connection, dependencies: dict) -> None:
+        intellij_dependencies = dependencies["install-intellij"]
+        architecture = ctx.distro.get_architecture(conn)
+        architecture_dependencies = intellij_dependencies["architectures"][architecture]
+        target_parent_dir = "/usr/local"
+        target_symlink = os.path.join(target_parent_dir, "intellij")
+        remote_gz_file_path = os.path.join("/var/tmp/", architecture_dependencies["filename"])
+        conn.put(architecture_dependencies["local_file_path"], remote_gz_file_path)
+        Utils.unpack_file(
+            conn=conn,
+            archive_file_path=remote_gz_file_path,
+            archive_file_type=ArchiveType.TAR_GZ,
+            target_parent_dir=target_parent_dir,
+            symlink_path=target_symlink,
+        )
 
     @staticmethod
     def _install_java_adoptium_eclipse_temurin(
@@ -257,17 +256,22 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
         if version is None:
             version = task_configs["version"]
 
+        target_parent_dir = "/usr/local"
         target_dir = os.path.join("/usr/local", f"apache-maven-{version}")
         target_symlink = os.path.join("/usr/local", f"apache-maven")
-        local_tarball_path = dependencies["install-maven"][Java.MAVEN_DEPENDENCY_TARBALL_PATH]
-        remote_tarball_path = "/var/tmp/maven.tar.gz"
-        # FIXME: Swap this out for Unpack_file
-        conn.put(local_tarball_path, remote_tarball_path)
-        conn.run(f"rm -rf {target_dir}")
-        conn.run(f"rm -f {target_symlink}")
-        conn.run(f"tar -xzf {remote_tarball_path} -C /usr/local")
-        conn.run(f"ln -s {target_dir} {target_symlink}")
-        conn.run(f"rm -f {remote_tarball_path}")
+        local_compressed_file_path = dependencies["install-maven"][
+            Java.MAVEN_DEPENDENCY_TARBALL_PATH
+        ]
+        remote_compressed_file_path = "/var/tmp/maven.tar.gz"
+        conn.put(local_compressed_file_path, remote_compressed_file_path)
+        Utils.unpack_file(
+            conn=conn,
+            archive_file_path=remote_compressed_file_path,
+            archive_file_type=ArchiveType.TAR_GZ,
+            target_dir=target_dir,
+            target_parent_dir=target_parent_dir,
+            symlink_path=target_symlink,
+        )
 
     @staticmethod
     def install_maven_get_dependencies(
@@ -297,7 +301,7 @@ Add the following to your .bashrc and then add $MAVEN_HOME/bin' to your path
         r = requests.get(shasum_file_url, verify=ctx.distro.configs.is_request_verify())
         shasum = r.content.strip().decode("utf-8")
         if not Utils.file_checksum(
-            file_path=gz_downloaded_file_path, check_sum=shasum, hash_algo=HashAlgo.SHA512SUM
+            file_path=gz_downloaded_file_path, checksum=shasum, hash_algo=HashAlgo.SHA512SUM
         ):
             retval["errors"] = [
                 f"Downloaded file checksum does not match; gz_download_path={gz_downloaded_file_path}, shasum={shasum}"

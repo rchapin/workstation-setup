@@ -96,9 +96,9 @@ class ITDebian(ITBase):
         openjdk_version = "17"
         self._test_install_java_openjdk(version=openjdk_version)
 
+        self._test_install_cert_into_jvm()
         self._test_install_maven()
         self._test_install_gradle(version="7.5")
-        self._test_install_cert_into_jvm()
         self._test_install_intellij()
         self._test_install_google_cloud_cli({"google-cloud-cli"})
         self._test_install_minikube()

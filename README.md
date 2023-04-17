@@ -5,9 +5,9 @@ The following is a Python `invoke` and `fabric 2.x` based project for automatica
 
 Part of the impetus for this project was that I wanted to come up with a solution to a couple of problems that I had encountered building similar deployment automation applications.
 
-The first was making the code distribution agnostic, or at least providing a framework for abstracting out operations that were not distro specific and providing the ability to properly encapsulate distro specific commands.
+1. **Make the code distribution agnostic**, or at least provide a framework for abstracting operations that were not distro specific and provide the ability to properly encapsulate distro specific commands.
 
-The second was to make it testable and develop a framework for integration testing deployment automation tasks.  Because this is (headed in the direction of ) a bare-metal deployment framework and requires interactions with a complete computer and not just a container I opted for using Vagrant to orchestrate VirtualBox VMs.
+2. **Make it testable** and develop a framework for integration testing deployment automation tasks.  Because this is (headed in the direction of) a bare-metal deployment framework and requires interactions with a complete computer and not just a container I opted for using Vagrant to orchestrate VirtualBox VMs.
 
 The following is a how-to and a set of automated tools for setting up a Linux, developer workstation.
 
@@ -141,6 +141,7 @@ install-cert                            Installs an additional ca cert, in PEM f
 install-cert-into-jvm                   Installs the provided CA cert, in pem format, into the jvm for which java-alternatives is currently configured.
 install-chrome                          Installs the Google Chrome browser.
 install-docker                          Installs docker and docker-compose, and adds the provided user to the docker group.
+install-drawio                          Installs the Drawio desktop application.
 install-google-cloud-cli                Installs the google-cloud-cli program suite.
 install-gradle                          Install the gradle build tool.
 install-helm                            Install the helm client.
@@ -153,6 +154,7 @@ install-packages                        Installs the base set of packages.
 install-pgadmin                         Installs PostgreSQL pgAdmin
 install-redshift                        Installs redshift, the configs, and the user-level systemd configurations
 install-slack                           Installs the Slack clent.
+install-zoom                            Installs the Zoom client.
 install-vscode                          Installs the Visual Studio Code IDE.
 print-feedback                          A utility task to print all collected feedback during an invocation.  Running this task directly will have no result.
 setup-inotify                           Increase the maximum user file watches for inotify.
@@ -433,7 +435,7 @@ If you choose to run the `install-chrome` task and you need to use a custom CA c
 
 ## VSCode Setup
 
-You may will need to turn off a VPM to be able to install Extensions.
+You may will need to turn off a VPN to be able to install Extensions.
 
 Extensions:
 - Eclipse Keymap

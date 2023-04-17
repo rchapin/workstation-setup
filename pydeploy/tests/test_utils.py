@@ -3,11 +3,19 @@ import os
 import requests
 import unittest
 from pydeploy import utils
-from pydeploy.utils import Utils
+from pydeploy.utils import Utils, GitHubReleaseInfo
 from unittest.mock import MagicMock, patch
+from io import BytesIO
 
+UPPER = range(97, 123)
+LOWER = range(65, 91)
 
 class UtilsTest(unittest.TestCase):
+
+    def get_test_data_file_path(self, filename) -> str:
+        cwd = os.path.dirname(os.path.realpath(__file__))
+        test_data_path =  os.path.join(cwd, "resources", filename)
+        return test_data_path
 
     def test_get_lines_from_file(self):
         pattern = "draw.io-x64-.*zip.blockmap"
@@ -31,7 +39,8 @@ class UtilsTest(unittest.TestCase):
 
     def exec_test_get_lines_from_file(self, pattern: str, expected_result: list[str]) -> None:
         cwd = os.path.dirname(os.path.realpath(__file__))
-        test_data_path =  os.path.join(cwd, "resources", "get-line-from-file-test-data.txt")
+        test_data_path = self.get_test_data_file_path("get-line-from-file-test-data.txt")
+
         actual_result = Utils.get_lines_from_file(path=test_data_path, pattern=pattern)
         self.assertCountEqual(
             expected_result,
@@ -56,7 +65,7 @@ class UtilsTest(unittest.TestCase):
         artifact_regex = "drawio-amd64-.*.deb"
         hashes_regex = "Files-SHA256-Hashes.txt"
 
-        actual_package_url, actual_hashes_url = Utils.get_github_release_info(
+        actual_result = Utils.get_github_release_info(
             url="http://example.com/output.json",
             artifact_regex=artifact_regex,
             hashes_regex=hashes_regex
@@ -64,12 +73,14 @@ class UtilsTest(unittest.TestCase):
 
         self.assertEqual(
             "https://github.com/jgraph/drawio-desktop/releases/download/v20.8.16/drawio-amd64-20.8.16.deb",
-            actual_package_url,
+            actual_result.artifact_url
         )
+        self.assertEqual("drawio-amd64-20.8.16.deb", actual_result.artifact_filename)
         self.assertEqual(
             "https://github.com/jgraph/drawio-desktop/releases/download/v20.8.16/Files-SHA256-Hashes.txt",
-            actual_hashes_url,
+            actual_result.hashes_url
         )
+        self.assertEqual("Files-SHA256-Hashes.txt", actual_result.hashes_filename)
 
     def test_hydrate(self):
         test_data = [

@@ -5,6 +5,7 @@ import re
 import requests
 import sys
 import yaml
+from collections import namedtuple
 from enum import Enum, auto
 from invoke import Context
 from fabric import Connection
@@ -14,6 +15,9 @@ from tempfile import TemporaryDirectory
 from typing import Tuple
 from pydeploy.enums import ArchiveType
 
+GitHubReleaseInfo = namedtuple(
+    "GitHubReleaseInfo", "artifact_url, artifact_filename, hashes_url, hashes_filename"
+)
 logging.basicConfig(
     format="%(asctime)s,%(levelname)s,%(module)s,%(message)s",
     level=logging.INFO,
@@ -60,7 +64,7 @@ class Utils(object):
 
     @staticmethod
     def file_checksum(
-        file_path: str, check_sum: str, hash_algo: HashAlgo, chunk_size: int = 1024
+        file_path: str, checksum: str, hash_algo: HashAlgo, chunk_size: int = 1024
     ) -> bool:
         h = None
         match hash_algo:
@@ -78,16 +82,43 @@ class Utils(object):
             while chunk != b"":
                 chunk = f.read(chunk_size)
                 h.update(chunk)
-        # Generate a hexidecimal representation of the hash digest and compare it against
+        # Generate a hexadecimal representation of the hash digest and compare it against
         # the check sum that was passed in.
         actual_check_sum = h.hexdigest()
 
-        if check_sum != actual_check_sum:
+        if checksum != actual_check_sum:
             logging.error(
-                f"Actual hash of file did not match expected hash, file_path={file_path}, check_sum={check_sum}, hash_algo={hash_algo}"
+                f"Actual hash of file did not match expected hash, file_path={file_path}, check_sum={checksum}, hash_algo={hash_algo}"
             )
             return False
         return True
+
+    @staticmethod
+    def file_checksum_with_checksum_file(
+        file_path: str,
+        hashes_file_path: str,
+        hashes_file_pattern: str,
+        hashes_line_token: int,
+        hash_algo: HashAlgo,
+    ) -> bool:
+
+        checksum_lines = Utils.get_lines_from_file(
+            path=hashes_file_path, pattern=hashes_file_pattern
+        )
+        if len(checksum_lines) != 1:
+            raise Exception(
+                "Extracting lines from checksum file.  No lines extracted; "
+                f"file_path={file_path}, "
+                f"hashes_file_path={hashes_file_path}, "
+                f"hashes_file_pattern={hashes_file_pattern}, "
+            )
+
+        # The hashes_line_token indicates the token the the array in which the hash should be after
+        # we split the line extracted from the hashes_file_path on whitespace.
+        checksum = checksum_lines[0].split()[hashes_line_token]
+        if Utils.file_checksum(file_path=file_path, checksum=checksum, hash_algo=hash_algo):
+            return True
+        return False
 
     @staticmethod
     def get_file_type(path: str, ctx: Context = None, conn: Connection = None) -> str:
@@ -103,7 +134,7 @@ class Utils(object):
     @staticmethod
     def get_github_release_info(
         url: str, artifact_regex: str, hashes_regex: str, verify: bool = True
-    ) -> Tuple[str, str]:
+    ) -> GitHubReleaseInfo:
         def get_url(pattern: str, asset_json: dict) -> str:
             name = asset_json["name"]
             result = re.match(pattern, name)
@@ -127,7 +158,30 @@ class Utils(object):
             if artifact_url is not None and hashes_url is not None:
                 break
 
-        return artifact_url, hashes_url
+        artifact_filename = artifact_url.split("/")[-1]
+        hashes_filename = hashes_url.split("/")[-1]
+        return GitHubReleaseInfo(artifact_url, artifact_filename, hashes_url, hashes_filename)
+
+    @staticmethod
+    def download_github_artifact_and_checksum(
+        configs,
+        github_release_info: GitHubReleaseInfo,
+        temp_dir: TemporaryDirectory,
+    ) -> Tuple[str, str]:
+        artifact_local_path = os.path.join(temp_dir.name, github_release_info.artifact_filename)
+        hashes_local_path = os.path.join(temp_dir.name, github_release_info.hashes_filename)
+        Utils.download_file(
+            configs=configs,
+            url=github_release_info.artifact_url,
+            target_local_path=artifact_local_path,
+        )
+        Utils.download_file(
+            configs=configs,
+            url=github_release_info.hashes_url,
+            target_local_path=hashes_local_path,
+        )
+
+        return artifact_local_path, hashes_local_path
 
     @staticmethod
     def get_lines_from_file(path: str, pattern: str) -> list[str]:

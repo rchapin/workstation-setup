@@ -15,30 +15,23 @@ class Distribution(ABC):
         self.configs = configs
 
     def add_repo(self, configs: Configs, conn: Connection, task: str) -> None:
-        temp_dir = None
-        try:
-            temp_dir = tempfile.TemporaryDirectory()
-            task_configs = self.configs.get_task_configs(task)
+        task_configs = self.configs.get_task_configs(task)
 
-            # Determine the architecture and the release and expand the repo file contents and then
-            # add the expanded value to the cfg dict.
-            repo_file_dict = dict(
-                architecture=self.get_architecture(conn),
-                release=self.get_release(conn),
-            )
-            repo_file_contents = Template(task_configs["repo_file_template"]).safe_substitute(
-                repo_file_dict
-            )
-            task_configs["repo_file_contents"] = repo_file_contents
+        # Determine the architecture and the release and expand the repo file contents and then
+        # add the expanded value to the cfg dict.
+        repo_file_dict = dict(
+            architecture=self.get_architecture(conn),
+            release=self.get_release(conn),
+        )
+        repo_file_contents = Template(task_configs["repo_file_template"]).safe_substitute(
+            repo_file_dict
+        )
+        task_configs["repo_file_contents"] = repo_file_contents
 
-            self.add_repo_impl(configs, conn, task_configs, temp_dir)
-        finally:
-            temp_dir.cleanup()
+        self.add_repo_impl(configs, conn, task_configs)
 
     @abstractmethod
-    def add_repo_impl(
-        self, configs: Configs, conn: Connection, task_configs: dict, temp_dir: TemporaryDirectory
-    ) -> None:
+    def add_repo_impl(self, configs: Configs, conn: Connection, task_configs: dict) -> None:
         pass
 
     def add_user_to_group(self, conn: Connection, user: str, groups) -> None:
@@ -76,6 +69,7 @@ class Distribution(ABC):
         if package_command == PackageCommand.REMOVE:
             cmd = self.get_remove_packages_cmd(packages=packages_str)
 
+        conn.run(self.get_update_packages_cmd())
         r = conn.run(cmd)
         if not r.failed:
             logging.info(f"Success; package_command={package_command.name}, packages={packages}")
@@ -102,6 +96,10 @@ class Distribution(ABC):
 
     def get_task_configs(self, task: str) -> dict:
         return self.configs.get_task_configs(task)
+
+    @abstractmethod
+    def get_update_packages_cmd(self) -> str:
+        pass
 
     @abstractmethod
     def install_cert(

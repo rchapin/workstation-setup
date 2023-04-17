@@ -41,65 +41,34 @@ WantedBy = default.target
         configs = ctx.distro.configs
         task_configs = ctx.distro.get_task_configs("install-drawio")
         verify = ctx.distro.configs.is_request_verify()
-        artifact_url, hashes_url = Utils.get_github_release_info(
+        github_release_info = Utils.get_github_release_info(
             url=task_configs["github_release_url"],
             artifact_regex=task_configs["artifact_regex"],
             hashes_regex=task_configs["hashes_regex"],
             verify=verify,
         )
-        if artifact_url is None or hashes_url is None:
-            errors.append(
-                f"Unable to get url for artfact or hashes; artifact_url={artifact_url}, hashes_url={hashes_url}"
-            )
-            retval["errors"] = errors
-            return retval
 
-        # Download the artifact and validate the checksum
-        artifact_filename = artifact_url.split("/")[-1]
-        hashes_filename = hashes_url.split("/")[-1]
-        artifact_local_path = os.path.join(temp_dir.name, artifact_filename)
-        hashes_local_path = os.path.join(temp_dir.name, hashes_filename)
-        Utils.download_file(
-            configs=configs,
-            url=artifact_url,
-            target_local_path=artifact_local_path,
-        )
-        Utils.download_file(
-            configs=configs,
-            url=hashes_url,
-            target_local_path=hashes_local_path,
+        # Download the artifact and then validate the checksum
+        artifact_local_path, hashes_local_path = Utils.download_github_artifact_and_checksum(
+            configs=configs, github_release_info=github_release_info, temp_dir=temp_dir
         )
 
-        # Validate the checksum for the downloaded file
-        checksum_lines = Utils.get_lines_from_file(
-            path=hashes_local_path, pattern=artifact_filename
-        )
-        if len(checksum_lines) != 1:
-            errors.append(
-                "We did not extract a single checksum line from the downloaded checksums; "
-                f"artifact_filename={artifact_filename}, "
-                f"hashes_local_path={hashes_local_path}, "
-                f"checksum_lines={checksum_lines}",
-            )
-            retval["errors"] = errors
-            return retval
-
-        checksum = checksum_lines[0].split()[1]
-
-        if not Utils.file_checksum(
-            file_path=artifact_local_path, check_sum=checksum, hash_algo=HashAlgo.SHA256SUM
+        hashes_line_pattern = f".*{github_release_info.artifact_filename}.*"
+        if not Utils.file_checksum_with_checksum_file(
+            file_path=artifact_local_path,
+            hashes_file_path=hashes_local_path,
+            hashes_file_pattern=hashes_line_pattern,
+            hashes_line_token=1,
+            hash_algo=HashAlgo.SHA256SUM,
         ):
-            errors.append(
-                "Checksum did not match; "
-                f"artifact_filename={artifact_filename}, "
+            raise Exception(
+                f"checking sha256sum on file mismatch; "
+                f"artifact_local_path={artifact_local_path}, "
                 f"hashes_local_path={hashes_local_path}, "
-                f"checksum={checksum}",
             )
-            retval["errors"] = errors
-            return retval
 
         retval["artifact_local_path"] = artifact_local_path
-        retval["artifact_filename"] = artifact_filename
+        retval["artifact_filename"] = github_release_info.artifact_filename
         return retval
 
     @staticmethod
@@ -110,6 +79,7 @@ WantedBy = default.target
         conn.put(dependencies["install-drawio"]["artifact_local_path"], artifact_remote_path)
         packages_paths = [artifact_remote_path]
         ctx.distro.install_local_package(conn=conn, packages_paths=packages_paths)
+        conn.run(f"rm -f {artifact_remote_path}")
 
     @staticmethod
     def install_minikube_get_dependencies(
@@ -151,7 +121,7 @@ WantedBy = default.target
                 sha256sum = r.text.strip()
                 if not Utils.file_checksum(
                     file_path=binary_local_file_path,
-                    check_sum=sha256sum,
+                    checksum=sha256sum,
                     hash_algo=HashAlgo.SHA256SUM,
                 ):
                     raise Exception(

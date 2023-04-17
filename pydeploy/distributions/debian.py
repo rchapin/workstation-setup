@@ -1,4 +1,6 @@
 import os
+import requests
+from io import BytesIO, StringIO
 from tempfile import TemporaryDirectory
 from string import Template
 from fabric import Connection
@@ -14,31 +16,28 @@ class Debian(Distribution):
         super().__init__(configs)
 
     def add_repo_impl(
-        self, configs: Configs, conn: Connection, task_configs: dict, temp_dir: TemporaryDirectory
+        self, configs: Configs, conn: Connection, task_configs: dict
     ) -> None:
-        local_gpg_file_path = os.path.join(temp_dir.name, task_configs["key_file_name"])
-        Utils.download_file(
-            configs=configs, url=task_configs["key_url"], target_local_path=local_gpg_file_path
-        )
+        self.install_package(conn, ["gpg"])
+        r = requests.get(url=task_configs["key_url"], verify=configs.is_request_verify())
+        gpg_file_contents = r.content
+
         remote_gpg_temp_file_path = os.path.join("/var/tmp/", task_configs["key_file_name"])
         remote_target_gpg_file_path = os.path.join(
             "/etc/apt/trusted.gpg.d", task_configs["key_file_name"]
         )
-        conn.put(local=local_gpg_file_path, remote=remote_gpg_temp_file_path)
+        conn.put(local=BytesIO(gpg_file_contents), remote=remote_gpg_temp_file_path)
         conn.run(f"rm -f {remote_target_gpg_file_path}")
         conn.run(f"gpg --dearmor -o {remote_target_gpg_file_path} {remote_gpg_temp_file_path}")
         conn.run(f"rm -f {remote_gpg_temp_file_path}")
 
         # Add the repo source.list.d file.
-        local_temp_file_path = os.path.join(temp_dir.name, task_configs["repo_file_name"])
         remote_temp_file_path = os.path.join("/var/tmp/", task_configs["repo_file_name"])
         remote_target_file_path = os.path.join(
             "/etc/apt/sources.list.d", task_configs["repo_file_name"]
         )
 
-        with open(local_temp_file_path, "wt") as f:
-            f.write(task_configs["repo_file_contents"])
-        conn.put(local=local_temp_file_path, remote=remote_temp_file_path)
+        conn.put(local=StringIO(task_configs["repo_file_contents"]), remote=remote_temp_file_path)
         conn.run(f"mv -f {remote_temp_file_path} {remote_target_file_path}")
         conn.run(f"chown root: {remote_target_file_path}")
         conn.run("apt-get update")
@@ -63,6 +62,9 @@ class Debian(Distribution):
 
     def get_remove_packages_cmd(self, packages: str) -> str:
         return f"apt-get remove -y --purge {packages}"
+
+    def get_update_packages_cmd(self) -> str:
+        return "apt-get update"
 
     def install_cert(
         self,
