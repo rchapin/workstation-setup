@@ -758,6 +758,12 @@ class ITBase(unittest.TestCase, ABC):
             if temp_dir is not None:
                 temp_dir.cleanup()
 
+    # TODO: We could DRY out these "install-package" type of tests
+    def _test_install_virtualbox(self, expected_packages: set):
+        args = self.get_test_program_args(["install-virtualbox"])
+        self.setup_sub_test_and_run(args)
+        self._validate_installed_packages(expected_packages)
+
     def _test_install_zoom(self, expected_packages: set):
         args = self.get_test_program_args(["install-zoom"])
         self.setup_sub_test_and_run(args)

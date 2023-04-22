@@ -5,7 +5,6 @@ import unittest
 from pydeploy import utils
 from pydeploy.utils import Utils, GitHubReleaseInfo
 from unittest.mock import MagicMock, patch
-from io import BytesIO
 
 UPPER = range(97, 123)
 LOWER = range(65, 91)

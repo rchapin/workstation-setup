@@ -106,6 +106,7 @@ class ITDebian(ITBase):
         self._test_pgadmin()
         self._test_install_drawio({"draw.io"})
         self._test_install_zoom({"zoom"})
+        self._test_install_virtualbox({"virtualbox-6.1"})
 
     def _test_bootstrap(self):
         self.setup_vagrant_box_fab_connection()

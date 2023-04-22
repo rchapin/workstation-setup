@@ -270,9 +270,11 @@ Use the following sample launch config to run and debug tasks in VSCode
 1. Select the workspace/project and then select **pytest pytest framework**
 1. Then select the directory that contains the tests, `workstationsetup`, and it will discover all of the tests. **NOTE** if it is unable to discover the tests check the **OUTPUT** console and select **Python** from the drop-down tab to see the details of any errors.
 1. Once that completes you will be able to run any of the tests discovered under the `Testing` side-bar.
+1. If you want to decrease the iteration time while running integration tests and debugging them in VSCode you will first need to comment out some of the sub-tests such that you don't have to wait for all of them to run before you get to the one that you want to debug.
 
 > If you are also making changes to the `pydeploy` repo you will need to make sure that you push your changes to the `pydeploy` branch and pull them in the integration test directory where `pydeploy` is cloned unless you are doing a complete teardown with each run iteration while developing which is not recommended.
 
+> If you are running integration tests via VSCode with the `WS_SETUP_INTTEST_VAGRANT_BOX_REUSE=True` `pytest.ini` configuration you will need to make sure to `vagrant destroy` the test boxes before attempting to run the complete test suite via `run-tests.sh`.
 ### Running and Debugging Tasks from VSCode
 
 If you want to run and debug the task (not running it via an integration test) do the following:
@@ -314,6 +316,11 @@ If you want to run and debug the task (not running it via an integration test) d
     },
     ```
     Where `<task-name>` is the task you want to execute.  If the task required any arguments, add them as additional elements to the `args` key in the launch config.
+
+## Managing Vagrant Boxes
+
+- **SSH to a running vagrant box**: Change directories to the directory with the `Vagranfile` and run `vagrant ssh`
+- **Copy a file to a running vagrant box**: Instead of copying to the running box you can "make a file on the host available to the guest" by putting it into the same directory as the `Vagrantfile`.  That directory is automatically mounted under `/vagrant` in the VM.
 ## Using on a Linux VM on a Windows 11 Host
 
 ### VM Setup

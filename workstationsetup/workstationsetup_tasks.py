@@ -17,6 +17,7 @@ from pydeploy.os import OS
 from pydeploy.slack import Slack
 from pydeploy.tasks import Tasks
 from pydeploy.utils import Utils, HashAlgo
+from pydeploy.virtualbox import VirtualBox
 from pydeploy.zoom import Zoom
 
 logging.basicConfig(
@@ -498,6 +499,20 @@ class WorkstationSetup(Tasks):
         pre=[Tasks.load_configs],
         post=[print_feedback],
     )
+    def install_virtualbox(ctx):
+        """
+        Installs Oracle VirtualBox
+        """
+        temp_dir = TemporaryDirectory()
+        dependencies = {"install-virtualbox": VirtualBox.get_dependencies(ctx, temp_dir)}
+        for host, conn in ctx.configs.connections.items():
+            VirtualBox.install(ctx, conn, dependencies)
+        temp_dir.cleanup()
+
+    @task(
+        pre=[Tasks.load_configs],
+        post=[print_feedback],
+    )
     def install_vscode(ctx):
         """
         Installs the Visual Studio Code IDE.
@@ -507,18 +522,6 @@ class WorkstationSetup(Tasks):
             task_configs = ctx.distro.get_task_configs("install-vscode")
             packages = task_configs["package"]
             ctx.distro.install_package(conn=conn, packages=packages)
-
-    @task(
-        pre=[Tasks.load_configs],
-        post=[print_feedback],
-        help={"max_user_watches": "OPTIONAL - The number of inotify file watches, default=524288"},
-    )
-    def setup_inotify(ctx, max_user_watches=524288):
-        """
-        Increase the maximum user file watches for inotify.
-        """
-        for _, conn in ctx.configs.connections.items():
-            OS.setup_inotify(conn, max_user_watches)
 
     @task(
         pre=[Tasks.load_configs],
@@ -533,3 +536,15 @@ class WorkstationSetup(Tasks):
         for host, conn in ctx.configs.connections.items():
             Zoom.install(ctx, conn, temp_dir, dependencies)
         temp_dir.cleanup()
+
+    @task(
+        pre=[Tasks.load_configs],
+        post=[print_feedback],
+        help={"max_user_watches": "OPTIONAL - The number of inotify file watches, default=524288"},
+    )
+    def setup_inotify(ctx, max_user_watches=524288):
+        """
+        Increase the maximum user file watches for inotify.
+        """
+        for _, conn in ctx.configs.connections.items():
+            OS.setup_inotify(conn, max_user_watches)

@@ -76,10 +76,10 @@ function export_env_vars {
   export WS_SETUP_INTTEST_VAGRANT_BOX_REUSE=${WS_SETUP_INTTEST_VAGRANT_BOX_REUSE:-False}
 
   # For each of the distros that we are testing we will create a vagrant box and for each need to
-  # export an env var, the key is the name of the distro directory and the value is
-  # a tuple which is the name of the box to be created and the the port that will be
-  # mapped to port 22 inside the container. After creating the configs for each container we will
-  # use and then increment the start port for its initialization step.
+  # export an env var, the key is the name of the distro directory and the value is a tuple which is
+  # the name of the box to be created and the the port that will be mapped to port 22 inside the
+  # container. After creating the configs for each container we will use and then increment the
+  # start port for its initialization step.
   local port=$WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT
 
   for distro in `ls workstationsetup/integration_tests/vagrant/`
