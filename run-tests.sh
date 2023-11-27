@@ -62,14 +62,6 @@ function export_env_vars {
   # define a separate port on which will map the ssh connections.
   export WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT=${WS_SETUP_INTTEST_VAGRANT_BOX_START_PORT:-22222}
 
-  # When we build each container we will export env vars that indicate the name of the container
-  # and the expected port to use for each
-
-  # It doesn't really matter what this password is. We just need something
-  # with which we can ssh/rsync to the container to execute the tests
-  export WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD=${WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD:-password123}
-  export WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE=${WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE:-$WS_SETUP_INTTEST_PARENT_DIR/test-container-root-passwd.txt}
-
   # Whether or not we are going to reuse vagrant boxes between test runs.  By default this is false.
   # The only use-case for this is when you are actually developing new tasks and do not want to spin
   # up the box between test runs.
@@ -186,9 +178,6 @@ function setup_vagrant_boxes {
     initialize_vagrant_box $start_dir $distro_vagrant_dir $box_name $port $box_path
 
   done
-
-  # Write out the password to a text file
-  echo "$WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD" > $WS_SETUP_INTTEST_VAGRANT_BOX_ROOT_PASSWD_FILE
 }
 
 #---  FUNCTION  ----------------------------------------------------------------

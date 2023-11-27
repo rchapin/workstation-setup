@@ -2,7 +2,7 @@
 
 set -e
 
-# apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4
+apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y xfce4
 
 # Ensure that we can passwordlessly ssh to this host.
 sed -i '/PermitRootLogin/d' /etc/ssh/sshd_config

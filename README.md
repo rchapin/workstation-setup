@@ -65,7 +65,7 @@ At a high level, the way it works is:
     ```
     ssh-keygen && ssh-copy-id root@localhost
     ```
-1. Create a `yaml` config file that tells the `workstationsetup` program which Linux distro and window manager you are using on the host that you want to configure.
+1. Create a `yaml` config file that tells the `workstationsetup` program which Linux distro and window manager you are using on the host that you want to configure.  See [Overriding and Extending PyDeploy Configurations](#overriding-and-extending-pydeploy-configurations) for details on overrides.
     ```
     cat << EOF >> /var/tmp/ws-setup.yaml
     distro:
@@ -73,20 +73,16 @@ At a high level, the way it works is:
         version: '11'
         window_manager: xfce4
 
-    # Optional, overriding task configs.  See
+    # Optional, overriding task configs.
     # task_configs:
     #     install-maven:
-    #     version:
-    #         mode: OVERRIDE
-    #         value: 3.6.3
+    #         version: 3.6.3
     #     install-packages:
     #         packages:
-    #             mode: APPEND
-    #             value:
-    #                 - remmina
-    #                 - hp-ppd
-    #                 - hplip
-    #                 - hplip-gui
+    #            - remmina
+    #            - hp-ppd
+    #            - hplip
+    #            - hplip-gui
     EOF
     ```
 1. Export environment variables pointing to the config file and the PyDeploy Config repo
@@ -110,7 +106,7 @@ workstationsetup -h <task>
 
 -u [STRING], --hosts-connection-user[=STRING] - The username for the fabric/ssh connections for the hosts on which we will run the tasks, default=root
 
--c STRING, --config-path=STRING - Fully qualified path to the PyDeploy config yaml file
+-c STRING, --config-path=STRING - Fully qualified path to the workstation config yaml file
 
 --pydeploy-config-dir[=STRING] - Fully qualified path to the PyDeploy base config directory. You should clone this directory prior to running these tasks.
 
@@ -163,51 +159,33 @@ setup-inotify                           Increase the maximum user file watches f
 
 The PyDeploy Configs repo defines a default set of configurations for all of the deployment tasks on a per distro basis.
 
-These configurations can be overridden or extended based on the type of configuration that is being mutated.
+These configurations can be overridden by defining an overriding set of configurations on a task-by-task basis under a `task_configs` top level key.
 
-Each task has a top-level config black that is the exact same name as the task evoked on the command-line.  The `install-docker` task has a `install-docker` top-level config entry in the PyDeploy Configs yaml file.
-
-Config keys that have a single value can be overridden and configs keys with list values can either be overridden or extended.
+Each task has a top-level config block that is the exact same name as the task evoked on the command-line.  The `install-docker` task has a `install-docker` top-level config entry in the PyDeploy Configs yaml file.
 
 An example config file:
 ```
 task_configs:
     # Indicate that we want to override the install-maven configs in
-    # the PyDeploy Config file
+    # the PyDeploy Config file.
     install-maven:
 
         # Indicate which of the config elements of the install-maven
-        # config we want to override
-        version:
-
-            # Indicate the mode [OVERRIDE|APPEND]
-            # OVERRIDE will completely replace the targeted config
-            mode: OVERRIDE
-
-            # Define the value that we want to use to override the
-            # install-maven.version config
-            value: 3.6.3
+        # config we want to override and provide a value.
+        version: 3.6.3
 
     # Indicate that we want to override the install-packages configs in
-    # the PyDeploy Config file
+    # the PyDeploy Config file.
     install-packages:
 
-        # Indicate which of the config elements of the install-maven
-        # config we want to override
+        # Indicate which of the config elements of the install-packages
+        # config we want to override and provide a complete replacement for
+        # the default values.
         packages:
-
-            # Indicate the mode [OVERRIDE|APPEND]
-            # APPEND will add any elements defined here to the existing
-            # list of configuration elements.
-            mode: APPEND
-
-            # Define a list of elements that we want appended to the
-            # install-packages.packages configuration list.
-            value:
-                - remmina
-                - hp-ppd
-                - hplip
-                - hplip-gui
+           - remmina
+           - hp-ppd
+           - hplip
+           - hplip-gui
 ```
 
 ## Developing and Debugging

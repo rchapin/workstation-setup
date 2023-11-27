@@ -2,8 +2,7 @@ import copy
 import logging
 import os
 from fabric import Connection
-from pydeploy.enums import ConfigUpdateMode
-from pydeploy.enums import Distro, ConfigUpdateMode
+from pydeploy.enums import Distro
 from pydeploy.utils import Utils
 
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +19,6 @@ class Configs(object):
         hosts_ssh_identity_file: str = None,
         requests_disable_warnings: bool = False,
     ) -> None:
-
         self.pydeploy_config_dir = pydeploy_config_dir
         self.config_file_path = config_file_path
         self.hosts = hosts.split(",")
@@ -44,27 +42,32 @@ class Configs(object):
 
     @staticmethod
     def apply_override_configs(base_configs: dict, override_configs: dict) -> dict:
-        retval = copy.deepcopy(base_configs)
+        retval = {}
 
-        # Iterate over all of the keys in the overrides and update the base configs
-        # dict based on the user customizations.
-        for override_task, override_task_cfg in override_configs.items():
-            # Iterate over all of the keys for this task and update the configs
-            for override_task_cfg_key, override_task_cfg_val in override_task_cfg.items():
-                # Determine the mode and based on that update the same key in the configs dict with
-                # the current value
-                if override_task_cfg_val["mode"] == ConfigUpdateMode.APPEND.name:
-                    logging.info(
-                        f"Appending config; task={override_task}, cfg_key={override_task_cfg_key}, value={override_task_cfg_val['value']}"
+        base_config_keys = set(base_configs.keys())
+        override_config_keys = set(override_configs.keys())
+
+        # Check to see if there are any keys that are in the override set that are NOT in the base
+        # set.  If so, just add them to the retval.
+        for override_key in override_config_keys:
+            if override_key not in base_config_keys:
+                retval[override_key] = override_configs[override_key]
+
+        # Iterate over the set of base keys and look to see if there is an override key
+        for key in base_config_keys:
+            if key in override_config_keys:
+                if type(base_configs[key]) is dict and type(override_configs[key]) is dict:
+                    # Recurse with the two dict
+                    overridden_key = Configs.apply_override_configs(
+                        base_configs[key], override_configs[key]
                     )
-                    retval[override_task][override_task_cfg_key].extend(
-                        override_task_cfg_val["value"]
-                    )
-                elif override_task_cfg_val["mode"] == ConfigUpdateMode.OVERRIDE.name:
-                    logging.info(
-                        f"Overriding config; task={override_task}, cfg_key={override_task_cfg_key}, value={override_task_cfg_val['value']}"
-                    )
-                    retval[override_task][override_task_cfg_key] = override_task_cfg_val["value"]
+                    retval[key] = overridden_key
+                else:
+                    # Base case: There are no keys in either of the dicts that are dicts.  Just take
+                    # the value of the overridden key
+                    retval[key] = override_configs[key]
+            else:
+                retval[key] = base_configs[key]
 
         return retval
 
@@ -113,16 +116,14 @@ class Configs(object):
         )
 
         # Load both the common configs and the distro configs and merge the common configs into the
-        # distro configs dics.
+        # distro configs dicts.
         common_configs_path = os.path.join(self.pydeploy_config_dir, "common", "common.yaml")
         self.common_configs = Utils.load_yaml_file(common_configs_path)
         distro_configs_file_name = f"{self.distro.name.lower()}_{self.distro_version}.yaml"
-        distro_configs_path = os.path.join(
-            self.pydeploy_config_dir, "distros", distro_configs_file_name
+        distro_configs_dir_path = os.path.join(self.pydeploy_config_dir, "distros")
+        distro_configs = Configs.load_distro_configs(
+            config_dir=distro_configs_dir_path, distro_configs_file_name=distro_configs_file_name
         )
-        distro_configs = Utils.load_yaml_file(distro_configs_path)
-        # self.distro_configs = copy.deepcopy(distro_configs)
-        # self.distro_configs.update(self.common_configs)
         self.distro_configs = Configs.merge_configs(self.common_configs, distro_configs)
 
         # If the user has provided any task override configs in the config file, merge those with the
@@ -141,6 +142,23 @@ class Configs(object):
 
     def is_request_verify(self) -> bool:
         return True if self.requests_disable_warnings is False else False
+
+    @staticmethod
+    def load_distro_configs(config_dir: str, distro_configs_file_name: str) -> dict:
+        distro_configs_path = os.path.join(config_dir, distro_configs_file_name)
+        distro_configs = Utils.load_yaml_file(distro_configs_path)
+
+        # Check to see if this distro is using a base set of configs.  If so, load it, apply any
+        # overridden configs and return. Otherwise, just load the file and return the configs.
+        if "base" in distro_configs:
+            # The assumption is that the base configs are in the same directory
+            base_configs_path = os.path.join(config_dir, distro_configs["base"])
+            base_configs = Utils.load_yaml_file(base_configs_path)
+
+            overridden_configs = Configs.apply_override_configs(base_configs, distro_configs)
+            return overridden_configs
+        else:
+            return distro_configs
 
     @staticmethod
     def merge_configs(a: dict, b: dict) -> dict:

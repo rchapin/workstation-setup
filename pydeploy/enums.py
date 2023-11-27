@@ -13,11 +13,6 @@ class ArchiveType(PyDeployEnum):
     ZIP = 3
 
 
-class ConfigUpdateMode(PyDeployEnum):
-    APPEND = 1
-    OVERRIDE = 2
-
-
 class Distro(PyDeployEnum):
     # The value of the enum is the name of the class for this distro
     DEBIAN = "Debian"

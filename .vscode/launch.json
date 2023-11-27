@@ -36,7 +36,7 @@
       "name": "ws_install-packages",
       "type": "python",
       "request": "launch",
-      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/invoke",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/workstationsetup",
       "console": "integratedTerminal",
       "justMyCode": false,
       "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
@@ -226,6 +226,26 @@
       "env": {
         "WS_SETUP_DISTRO": "debian_11"
       }
-    }
+    },
+    {
+      "name": "inotify",
+      "type": "python",
+      "request": "launch",
+      "program": "/home/rchapin/.virtualenvs/workstation-setup/bin/workstationsetup",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
+      "args": [
+        "--pydeploy-config-dir",
+        "/home/rchapin/Documents/workspace/pydeploy-configs",
+        "--config-path",
+        "/var/tmp/ws-setup.yaml",
+        "--hosts",
+        "localhost",
+        "setup-inotify",
+        "-m",
+        "524288"
+      ],
+    },
   ]
 }

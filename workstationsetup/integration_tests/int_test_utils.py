@@ -16,7 +16,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from pydeploy.enums import ConfigUpdateMode, Distro, WindowManager
+from pydeploy.enums import Distro, WindowManager
 
 logging.basicConfig(
     format="%(asctime)s,%(levelname)s,%(module)s,%(message)s",
@@ -47,7 +47,6 @@ class IntegrationTestUtils(object):
         org_name: str,
         org_unit_name: str,
     ) -> Tuple[str, str]:
-
         now = datetime.datetime.utcnow()
         one_day = datetime.timedelta(1, 0, 0)
         ten_days = datetime.timedelta(10, 0, 0)
@@ -198,14 +197,6 @@ class IntegrationTestUtils(object):
         return retval
 
     @staticmethod
-    def read_file_to_list(path: str) -> list[str]:
-        retval = []
-        
-
-        return retval
-
-
-    @staticmethod
     def run_subprocess(command: list[str]) -> Tuple[int, str, str]:
         r = subprocess.run(
             command, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -216,10 +207,10 @@ class IntegrationTestUtils(object):
     def wait_for_port_to_be_available(
         host: str, port: int, sleep_time: int = 1, timeout: int = 60
     ) -> None:
-
         timeout_exception = Exception(
             f"Timed-out waiting to be able to connect; timeout={timeout}, host={host}, port={port}"
         )
+
         def is_timeout_reached(start_time: float, timeout: int) -> bool:
             time_diff = time.time() - start_time
             if time_diff >= timeout:

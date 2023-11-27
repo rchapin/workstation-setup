@@ -10,9 +10,33 @@ from pydeploy.enums import PackageCommand
 
 
 class Distribution(ABC):
+    GNUPG_CONF_DIR = "/etc/gnupg"
+    GNUPG_CONF_FILE_PATH = f"{GNUPG_CONF_DIR}/gpg.conf"
+    GNUPG_CONF_ALLOW_WEAK_DIGEST_ALGO = "allow-weak-digest-algos"
+
     def __init__(self, configs: Configs) -> None:
         super().__init__()
         self.configs = configs
+
+    def add_gpg_config(self, conn: Connection, config: str) -> bool:
+        # Check to see if there is already a gnugp dir
+        pre_existing_dir = self.directory_exists(conn, Distribution.GNUPG_CONF_DIR)
+        if pre_existing_dir == False:
+            conn.run(f"mkdir -p {Distribution.GNUPG_CONF_DIR}")
+
+        # Ensure we are not duplicating a config
+        if self.file_exists(conn, Distribution.GNUPG_CONF_FILE_PATH):
+            conn.run(f"sed -i '/{config}/d' {Distribution.GNUPG_CONF_FILE_PATH}")
+        conn.run(f'echo "{config}" >> {Distribution.GNUPG_CONF_FILE_PATH}')
+        return pre_existing_dir
+
+    def remove_gpg_config(self, conn: Connection, config: str, should_delete_gpg_dir: bool) -> None:
+        if should_delete_gpg_dir:
+            # Just delete the whole directory and the config file
+            conn.run(f"rm -rf {Distribution.GNUPG_CONF_DIR}")
+        else:
+            # Just remove the config we added
+            conn.run(f"sed -i '/{config}/d' {Distribution.GNUPG_CONF_FILE_PATH}")
 
     def add_repo(self, configs: Configs, conn: Connection, task: str) -> None:
         task_configs = self.configs.get_task_configs(task)
@@ -73,6 +97,14 @@ class Distribution(ABC):
         r = conn.run(cmd)
         if not r.failed:
             logging.info(f"Success; package_command={package_command.name}, packages={packages}")
+
+    def directory_exists(self, conn: Connection, path: str) -> bool:
+        r = conn.run(f"test -d {path}", warn=True)
+        return r.return_code == 0
+
+    def file_exists(self, conn: Connection, path: str) -> bool:
+        r = conn.run("test -f {path}", warn=True)
+        return r.return_code == 0
 
     @abstractmethod
     def get_architecture(self, conn: Connection) -> str:

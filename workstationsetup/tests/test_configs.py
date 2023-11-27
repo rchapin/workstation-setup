@@ -25,7 +25,12 @@ class ConfigsTest(unittest.TestCase):
                 "a": {"key_one": {"temp": 123, "height": 3}},
                 "b": {"key_one": {"packages": ["a", "b", "c"], "configs": {"ka": 1, "kb": 2}}},
                 "expected_result": {
-                    "key_one": {"temp": 123, "height": 3, "packages": ["a", "b", "c"], "configs": {"ka": 1, "kb": 2}}
+                    "key_one": {
+                        "temp": 123,
+                        "height": 3,
+                        "packages": ["a", "b", "c"],
+                        "configs": {"ka": 1, "kb": 2},
+                    }
                 },
             },
             {
@@ -72,3 +77,114 @@ class ConfigsTest(unittest.TestCase):
         for t in test_data:
             actual_result = Configs.merge_configs(t["a"], t["b"])
             self.assertEqual(t["expected_result"], actual_result)
+
+    def test_apply_override_configs(self):
+        test_data = [
+            {
+                "name": "Override scalar key",
+                "a": {
+                    "temp": 123,
+                    "height": 6,
+                },
+                "b": {
+                    "height": 647,
+                },
+                "expected_result": {
+                    "temp": 123,
+                    "height": 647,
+                },
+            },
+            {
+                "name": "Override list sub-key",
+                "a": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "packages": ["a", "b", "c"],
+                    },
+                },
+                "b": {
+                    "key_one": {
+                        "packages": ["a", "b", "d"],
+                    },
+                },
+                "expected_result": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "packages": ["a", "b", "d"],
+                    },
+                },
+            },
+            {
+                "name": "Override nested sub-key value",
+                "a": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "things": {
+                            "t1": "foo",
+                            "t2": "blah",
+                        },
+                        "packages": ["a", "b", "c"],
+                        "configs": {
+                            "ka": 1,
+                            "kb": 2,
+                        },
+                    },
+                },
+                "b": {
+                    "key_one": {
+                        "configs": {
+                            "ka": 1,
+                            "kb": 9,
+                        },
+                    },
+                },
+                "expected_result": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "things": {
+                            "t1": "foo",
+                            "t2": "blah",
+                        },
+                        "packages": ["a", "b", "c"],
+                        "configs": {
+                            "ka": 1,
+                            "kb": 9,
+                        },
+                    },
+                },
+            },
+            {
+                "name": "Additional sub-key in override",
+                "a": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "packages": ["a", "b", "c"],
+                    },
+                },
+                "b": {
+                    "key_one": {
+                        "extra_key": True,
+                    },
+                },
+                "expected_result": {
+                    "temp": 123,
+                    "height": 6,
+                    "key_one": {
+                        "packages": ["a", "b", "c"],
+                        "extra_key": True,
+                    },
+                },
+            },
+        ]
+
+        for t in test_data:
+            with self.subTest(t["name"], t=t):
+                actual_result = Configs.apply_override_configs(t["a"], t["b"])
+                self.assertEqual(
+                    t["expected_result"], actual_result, f"test failed; name={t['name']}"
+                )

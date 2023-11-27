@@ -9,8 +9,10 @@ from string import Template
 from tempfile import TemporaryDirectory
 from pydeploy.utils import Utils, HashAlgo
 
+
 class InvalidExtPackInput(Exception):
     pass
+
 
 class VirtualBox(object):
     @staticmethod
@@ -77,17 +79,18 @@ class VirtualBox(object):
         # to do but fall through and install the extension pack defined in the configs.
         if installed_extpacks != {}:
             # Is the version that we want to install already installed?
-            if task_configs["version"] == installed_extpacks["version"] and task_configs["revision"] == installed_extpacks["revision"] and installed_extpacks["usable"] == True:
+            if (
+                task_configs["version"] == installed_extpacks["version"]
+                and task_configs["revision"] == installed_extpacks["revision"]
+                and installed_extpacks["usable"] == True
+            ):
                 # We already have the correct version installed . . . nothing else to do
                 return
             r = conn.run('vboxmanage extpack uninstall "Oracle VM VirtualBox Extension Pack"')
 
         # Put the extension pack on the remote host and install it
         virtualbox_dependencies = dependencies["install-virtualbox"]
-        remote_ext_pack_file_path = os.path.join(
-            "/var/tmp/",
-            virtualbox_dependencies["filename"]
-            )
+        remote_ext_pack_file_path = os.path.join("/var/tmp/", virtualbox_dependencies["filename"])
         conn.put(virtualbox_dependencies["local_file_path"], remote_ext_pack_file_path)
         r = conn.run(f"yes y | vboxmanage extpack install {remote_ext_pack_file_path}")
 
@@ -99,34 +102,39 @@ class VirtualBox(object):
         if len(lines) == 0:
             raise InvalidExtPackInput("extpack stdout did not contain any lines")
 
-        first_line = lines[0]
-        # The very first line should indicate how many packs are installed
-        if "Extension Packs:" not in first_line:
+        found_ext_packs_line = False
+        num_extpacks = None
+        for line in lines:
+            if "Extension Packs:" not in line:
+                continue
+            found_ext_packs_line = True
+            # The line is expected to be something like the following
+            #   "Extension Packs: 1"
+            # We will split it to find out how many extpacks are installed
+            num_extpacks_tokens = line.split(":")
+            if len(num_extpacks_tokens) != 2:
+                raise InvalidExtPackInput(
+                    "First line of stdout did not contain expected string format indicating number of extpacks installed; "
+                    f"first_line={line}"
+                )
+            try:
+                num_extpacks = int(num_extpacks_tokens[1].strip())
+            except:
+                raise InvalidExtPackInput(
+                    "First line of stdout did not contain valid token to convert to int to determine the number of extpacks installed; "
+                    f"first_line={line}"
+                )
+        if found_ext_packs_line == False:
             raise InvalidExtPackInput(
-                "First line of stdout did not contain expected string indicating number of extpacks installed; "
-                f"first_line={first_line}")
-
-        # The first line is expected to be something like the following
-        #   "Extension Packs: 1"
-        # We will split it to find out how many extpacks are installed
-        num_extpacks_tokens = first_line.split(":")
-        if len(num_extpacks_tokens) != 2:
-            raise InvalidExtPackInput(
-                "First line of stdout did not contain expected string indicating number of extpacks installed; "
-                f"first_line={first_line}")
-        try:
-            num_extpacks = int(num_extpacks_tokens[1].strip())
-        except:
-            raise InvalidExtPackInput(
-                "First line of stdout did not contain expected string indicating number of extpacks installed; "
-                f"first_line={first_line}")
+                f"Unable to determine the number of existing extension packs; lines={lines}"
+            )
 
         def get_line_value(line) -> str:
             tokens = line.split()
             return tokens[1]
 
         if num_extpacks > 0:
-            for line in lines[1:]:
+            for line in lines:
                 if "Version" in line:
                     retval["version"] = get_line_value(line)
                 elif "Revision" in line:

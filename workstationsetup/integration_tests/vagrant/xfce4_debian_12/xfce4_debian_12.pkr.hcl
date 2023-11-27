@@ -10,7 +10,7 @@ source "vagrant" "xfce4_debian_12" {
   communicator = "ssh"
   provider     = "virtualbox"
   source_path  = "debian/bookworm64"
-  box_version  = "12.20231009.1"
+  // box_version  = "12.20231009.1"
 }
 
 build {

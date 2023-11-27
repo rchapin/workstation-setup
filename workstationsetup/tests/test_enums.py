@@ -1,18 +1,10 @@
 import unittest
-from pydeploy.enums import ConfigUpdateMode, Distro, WindowManager
+from pydeploy.enums import Distro, WindowManager
 
 
 class EnumsTest(unittest.TestCase):
     def test_get_by_name(self):
         test_data = [
-            dict(
-                actual=ConfigUpdateMode.get_by_name("APPEND"),
-                expected=ConfigUpdateMode.APPEND,
-            ),
-            dict(
-                actual=ConfigUpdateMode.get_by_name("OVERRIDE"),
-                expected=ConfigUpdateMode.OVERRIDE,
-            ),
             dict(
                 actual=Distro.get_by_name("DEBIAN"),
                 expected=Distro.DEBIAN,

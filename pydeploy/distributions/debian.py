@@ -8,18 +8,16 @@ from invoke.exceptions import Exit
 from invoke import Context
 from pydeploy.configs import Configs
 from pydeploy.distributions.distribution import Distribution
-from pydeploy.utils import Utils
+from pydeploy.utils import Utils, HashAlgo
 
 
 class Debian(Distribution):
     def __init__(self, configs: Configs) -> None:
         super().__init__(configs)
 
-    def add_repo_impl(
-        self, configs: Configs, conn: Connection, task_configs: dict
-    ) -> None:
+    def add_repo_impl(self, configs: Configs, conn: Connection, task_configs: dict) -> None:
         self.install_package(conn, ["gpg"])
-        r = requests.get(url=task_configs["key_url"], verify=configs.is_request_verify())
+        r = Utils.requests_retry(url=task_configs["key_url"], verify=configs.is_request_verify())
         gpg_file_contents = r.content
 
         remote_gpg_temp_file_path = os.path.join("/var/tmp/", task_configs["key_file_name"])
@@ -121,6 +119,15 @@ class Debian(Distribution):
                 public_key_file_path=public_key_file_path,
                 verify_configs=verify_configs,
             )
+        elif mode == "dpkg-sig-legacy":
+            retval = self.verify_package_dpkgsig_legacy(
+                ctx=ctx,
+                conn=conn,
+                temp_dir=temp_dir,
+                package_file_path=package_file_path,
+                public_key_file_path=public_key_file_path,
+                verify_configs=verify_configs,
+            )
         else:
             raise Exception(f"Unknown verify_configs.mode; mode={mode}")
 
@@ -136,6 +143,7 @@ class Debian(Distribution):
         verify_configs: dict,
     ) -> bool:
         # Ensure that required packages are installed on the target host
+        # Do not use this function with Debian 12 distro; dpkg-sig has been removed
         packages = ["gpg", "dpkg-sig"]
         ctx.distro.install_package(conn=conn, packages=packages)
         r = conn.run(f"gpg --import {public_key_file_path}")
@@ -151,8 +159,76 @@ class Debian(Distribution):
                 return False
         else:
             raise Exception(
-                f"verifying gpg key; public_key_file_path={public_key_file_path}, r.stderr={r.stderr}"
+                f"verifying package; package_file_path={package_file_path}, r.stderr={r.stderr}"
             )
+
+    def verify_package_dpkgsig_legacy(
+        self,
+        ctx: Context,
+        conn: Connection,
+        temp_dir: TemporaryDirectory,
+        package_file_path: str,
+        public_key_file_path: str,
+        verify_configs: dict,
+    ) -> bool:
+        """
+        verify_package_dpkgsig_legacy will attempt to unpack the deb file and validate that a file
+        signed file defined in the verify_configs has been signed by the provided GPG public key.
+        """
+        # Ensure that we have the required packages installed
+        ctx.distro.install_package(conn=conn, packages=["gpg"])
+        r = conn.run(f"gpg --import {public_key_file_path}")
+        if r.return_code != 0:
+            raise Exception(
+                f"importing gpg key; public_key_file_path={public_key_file_path}, r.stderr={r.stderr}"
+            )
+
+        # Create a temp dir on the remote box and unpack the deb file into it
+        file_name = os.path.basename(package_file_path)
+        temp_dir_path = os.path.join("/var/tmp/", f"{file_name}_unpack")
+
+        def cleanup_temp_dir():
+            conn.run(f"rm -rf {temp_dir_path}")
+
+        cleanup_temp_dir()
+        conn.run(f"mkdir -p {temp_dir_path}")
+        conn.run(f"cd {temp_dir_path} && ar -x {package_file_path}")
+
+        # Verify the signature file
+        sig_file_path = os.path.join(temp_dir_path, verify_configs["gpg_sig_file_name"])
+        r = conn.run(f"gpg --verify {sig_file_path}")
+
+        if r.return_code != 0:
+            return False
+        output = r.stdout
+        output += r.stderr
+        if "Good signature" not in output:
+            return False
+
+        # Now that we have validated the signature, validate the MD5sums of the files contained in
+        # the deb file listed in the signature.
+        r = conn.run(f"ls -1 {temp_dir_path}")
+        unpacked_files = r.stdout.splitlines()
+        assert len(unpacked_files) > 0
+        for unpacked_file in unpacked_files:
+            if unpacked_file == verify_configs["gpg_sig_file_name"]:
+                # Skip the signature file
+                continue
+            r = conn.run(f'grep "{unpacked_file}" {sig_file_path}')
+            tokens = r.stdout.split()
+            shasum = tokens[1]
+            file_path = os.path.join(temp_dir_path, unpacked_file)
+            if not Utils.file_checksum_remote(
+                conn=conn,
+                file_path=file_path,
+                checksum=shasum,
+                hash_algo=HashAlgo[verify_configs["hash_algo"]],
+            ):
+                cleanup_temp_dir()
+                return False
+
+        cleanup_temp_dir()
+        return True
 
     def verify_package_debsig(
         self,
@@ -195,8 +271,30 @@ class Debian(Distribution):
         conn.put(policy_file_local_path, policy_file_remote_path)
         conn.run(f"chown root: {policy_file_remote_path}")
 
+        # There are still some packages out there that are using SHA1 or other weak algorithms with
+        # their signatures. If so configured, enable the use of weak digest algos.
+        added_gpg_config = False
+        pre_existing_gpg_config_dir = False
+        if (
+            "allow_weak_digest_algos" in verify_configs
+            and verify_configs["allow_weak_digest_algos"] == True
+        ):
+            pre_existing_gpg_config_dir = self.add_gpg_config(
+                conn, Distribution.GNUPG_CONF_ALLOW_WEAK_DIGEST_ALGO
+            )
+            added_gpg_config = True
+
         # Finally, verify the package signature
-        r = conn.run(f"debsig-verify {package_file_path}")
+        r = conn.run(f"debsig-verify {package_file_path}", warn=True)
+
+        # Remove the gpg config if we added it.
+        if added_gpg_config == True:
+            self.remove_gpg_config(
+                conn,
+                Distribution.GNUPG_CONF_ALLOW_WEAK_DIGEST_ALGO,
+                (pre_existing_gpg_config_dir == False),
+            )
+
         if r.return_code == 0:
             return True
         else:

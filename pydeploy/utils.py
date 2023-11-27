@@ -3,7 +3,9 @@ import logging
 import os
 import re
 import requests
+from requests import Response
 import sys
+import time
 import yaml
 from collections import namedtuple
 from enum import Enum, auto
@@ -28,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 class HashAlgo(Enum):
     MD5SUM = auto()
+    SHA1SUM = auto()
     SHA256SUM = auto()
     SHA512SUM = auto()
 
@@ -70,6 +73,8 @@ class Utils(object):
         match hash_algo:
             case HashAlgo.MD5SUM:
                 h = hashlib.md5()
+            case HashAlgo.SHA1SUM:
+                h = hashlib.sha1()
             case HashAlgo.SHA256SUM:
                 h = hashlib.sha256()
             case HashAlgo.SHA512SUM:
@@ -84,9 +89,9 @@ class Utils(object):
                 h.update(chunk)
         # Generate a hexadecimal representation of the hash digest and compare it against
         # the check sum that was passed in.
-        actual_check_sum = h.hexdigest()
+        actual_checksum = h.hexdigest()
 
-        if checksum != actual_check_sum:
+        if checksum != actual_checksum:
             logging.error(
                 f"Actual hash of file did not match expected hash, file_path={file_path}, check_sum={checksum}, hash_algo={hash_algo}"
             )
@@ -101,7 +106,6 @@ class Utils(object):
         hashes_line_token: int,
         hash_algo: HashAlgo,
     ) -> bool:
-
         checksum_lines = Utils.get_lines_from_file(
             path=hashes_file_path, pattern=hashes_file_pattern
         )
@@ -119,6 +123,22 @@ class Utils(object):
         if Utils.file_checksum(file_path=file_path, checksum=checksum, hash_algo=hash_algo):
             return True
         return False
+
+    @staticmethod
+    def file_checksum_remote(
+        conn: Connection, file_path: str, checksum: str, hash_algo: HashAlgo
+    ) -> bool:
+        algo_cmd = str(hash_algo).split(".")[1].lower()
+        r = conn.run(f"{algo_cmd} {file_path}")
+        tokens = r.stdout.split()
+        actual_checksum = tokens[0]
+
+        if checksum != actual_checksum:
+            logging.error(
+                f"Actual hash of file did not match expected hash, file_path={file_path}, check_sum={checksum}, hash_algo={hash_algo}"
+            )
+            return False
+        return True
 
     @staticmethod
     def get_file_type(path: str, ctx: Context = None, conn: Connection = None) -> str:
@@ -225,6 +245,36 @@ class Utils(object):
         return retval
 
     @staticmethod
+    def requests_retry(
+        url: str, verify: bool, retry_wait_sec: int = 2, retry_max_attempts: int = 5
+    ) -> Response:
+        attempts = 0
+        while True:
+            r = requests.get(url=url, verify=verify)
+            if r.status_code >= 200 and r.status_code <= 299:
+                return r
+
+            attempts += 1
+            if attempts <= retry_max_attempts:
+                logger.info(
+                    "attempt to load content from url resulted in non 2xx status_code, sleeping and retrying; ",
+                    "status_code=%d, content=%s, attempts=%d, retry_wait_sec=%d, retry_max_attempts=%d",
+                    r.status_code,
+                    r.content,
+                    attempts,
+                    retry_wait_sec,
+                    retry_max_attempts,
+                )
+                time.sleep(retry_wait_sec)
+            else:
+                logger.warn(
+                    "attempt to load content from url resulted in non 2xx status_code; status_code=%d, content=%s",
+                    r.status_code,
+                    r.content,
+                )
+                return r
+
+    @staticmethod
     def str_to_bool(input: str) -> bool:
         input = input.upper()
         return True if input == "TRUE" else False
@@ -280,7 +330,7 @@ class Utils(object):
             target_dir if target_dir else os.path.join(target_parent_dir, unpacked_dir_name)
         )
         conn.run(f"rm -rf {target_dir}")
-        logger.info(f"Unpacking compressed file; unpack_cmd={unpack_cmd}")
+        logger.info("Unpacking compressed file; unpack_cmd=%s", unpack_cmd)
         conn.run(unpack_cmd)
 
         if symlink_path is not None:
