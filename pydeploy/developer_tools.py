@@ -25,8 +25,11 @@ with the following commands
 
     REDSHIFT_UNIT_FILE = """[Unit]
 Description=Runs redshift
+After=network.service
+After=network-online.target
 
 [Service]
+Environment=DISPLAY=:0
 ExecStart=/usr/bin/redshift
 
 [Install]
@@ -186,6 +189,7 @@ WantedBy = default.target
         distro = ctx.distro
         configs = distro.configs
         task_configs = distro.get_task_configs("install-redshift")
+        ctx.distro.install_package(conn, task_configs["packages"])
 
         r = conn.run(f"grep {redshift_user} /etc/passwd")
         etc_passwd_line = r.stdout

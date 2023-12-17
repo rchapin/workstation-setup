@@ -50,16 +50,9 @@ At a high level, the way it works is:
     cd $REPO_DIR/workstation-setup
     ```
 1. Run the `install-python.sh` script (as the non-root user) to install and compile the current version of 3.10.x into your home directory.
-1. Add the following to your `~/.bashrc` to add python3.10 to your `PATH`
-    ```
-    cat << EOF >> ~/.bashrc
-    PYTHON_HOME=~/usr/local/python-3.10.8
-    export PATH=\$PATH:\$PYTHON_HOME/bin
-    EOF
-    ```
 1. Source the `setup.sh` script to setup a Python virtual environment.  It will automatically clean and setup a virtual environment.  This virtual environment will enable you to run the `workstationsetup` tasks to setup your workstation.
     ```
-    . ./setup.sh
+    export PATH=$PATH:~/usr/local/python-3.10.8/bin; . ./setup.sh
     ```
 1. Create a set of passphrase-less SSH keys for your non-root user and then setup password-less SSH connections to `root@localhost` on the workstation to enable execution of the deployment tasks
     ```
@@ -126,7 +119,7 @@ workstationsetup --pydeploy-config-dir $PYDEPLOY_CONF --config-path $WS_CONF --h
 
 **Run the `install-packages` task first** as most of the other tasks require a base set of packages already installed.  Once that task has been executed you can run any of the other tasks in whatever order that you would like.
 ```
-workstationsetup --pydeploy-config-dir $PYDEPLOY_CONF --config-path $WS_CONF --hosts=localhost <task> [task-args]
+workstationsetup --pydeploy-config-dir $PYDEPLOY_CONF --config-path $WS_CONF --hosts=localhost install-packages
 ```
 
 From there, any of the other tasks can be run to setup your workstation.  The full list is as follows:

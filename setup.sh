@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PYTHON=python3.10
+
 # ##############################################################################
 # Will create and source a virtual environment for the workstation-setup set of
 # This assumes that you already have the specified version of Python installed
@@ -22,6 +24,7 @@ fi
 
 # ##############################################################################
 rm -rf $VIRT_ENV_PATH
+mkdir -p $VIRT_ENV_PATH
 $PYTHON -mvenv $VIRT_ENV_PATH
 . $VIRT_ENV_PATH/bin/activate
 pip install -U setuptools pip

@@ -118,6 +118,7 @@ apt-get install -y  \
   libbz2-dev \
   libffi-dev \
   libgdbm-dev \
+  liblzma-dev \
   libncurses5-dev \
   libnss3-dev \
   libreadline-dev \

@@ -41,12 +41,14 @@
       "justMyCode": false,
       "cwd": "/home/rchapin/Documents/workspace/workstation-setup",
       "args": [
+        "--pydeploy-config-dir",
+        "/data/home/rchapin/Documents/workspace/pydeploy-configs",
+        "--config-path",
+        "/data/home/rchapin/Documents/workspace/mootley_config/leviathan/ws-setup.yaml",
+        "--hosts",
+        "localhost",
         "install-packages",
       ],
-      "env": {
-        "WS_SETUP_DISTRO": "debian_11",
-        "WS_SETUP_USER_CONFIGS": "/home/rchapin/Documents/workspace/workstation-setup/rchapin-wsconfigs.yaml"
-      }
     },
     {
       "name": "ws_install-docker",
